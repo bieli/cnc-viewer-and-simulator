@@ -4,7 +4,12 @@ The contents of this file are adapted from
 https://github.com/ifwe/digsby/blob/f5fe00244744aa131e07f09348d10563f3d8fa99/digsby/src/gui/native/win/winfonts.py#L15
 """
 import platform
-from ctypes import byref, create_unicode_buffer, windll
+from ctypes import byref, create_unicode_buffer
+try:
+    from ctypes import windll
+except ImportError:
+    windll = None
+
 from pathlib import Path
 
 FR_PRIVATE = 0x10

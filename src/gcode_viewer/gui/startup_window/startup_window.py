@@ -13,6 +13,6 @@ class Startup_Window(QWidget):
 
     def get_initial_file_path(self):
         file_path, _ = QFileDialog(self).getOpenFileName(caption="Select A GCode File That You Want To Load",
-                                                         filter="GCode (*.gcode)", initialFilter="GCode (*.gcode)")
+                                                         filter="GCode (*.gcode *.nc)", initialFilter="GCode (*.gcode *.nc)")
 
         return file_path

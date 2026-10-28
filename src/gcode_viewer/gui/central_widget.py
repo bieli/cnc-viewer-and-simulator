@@ -44,7 +44,12 @@ class Central_Widget(QWidget):
         bottom_grid.setColumnStretch(2, 1)
 
         self.setLayout(self.grid)
-
+        
+        # Ustawiamy proporcje kolumn: kolumna 0 (lewa - 3D) dostaje wagę 3, kolumna 1 (prawa - 2D) wagę 1.
+        # Daje to idealny podział 75% do 25% szerokości całego okna.
+        self.grid.setColumnStretch(0, 3)
+        self.grid.setColumnStretch(1, 1)
+        
     def start(self):
         test = Startup_Window()
         file_path = test.get_initial_file_path()
@@ -54,7 +59,7 @@ class Central_Widget(QWidget):
 
     def get_path_to_file(self):
         file_path, _ = QFileDialog(self).getOpenFileName(caption="Select A GCode File That You Want To Load",
-                                                      filter="GCode (*.gcode)", initialFilter="GCode (*.gcode)")
+                                                      filter="GCode (*.gcode *.nc)", initialFilter="GCode (*.gcode *.nc)")
 
         if file_path:
             self.load_gcode_file(file_path)
@@ -64,6 +69,9 @@ class Central_Widget(QWidget):
         line_list = self.file_handler.read_gcode_file(file_path)
         temp_layer_parser = Layer_Parser()
         layer_list = temp_layer_parser.parse_layer_list(line_list)
+
+        # Przekazujemy surowe linie kodu do modułu ponownego przeliczania czasu
+        self.right_side.set_raw_lines(line_list)
 
         self.load_new_file_on_screen(layer_list)
 

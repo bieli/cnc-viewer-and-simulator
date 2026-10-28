@@ -32,6 +32,12 @@ class GCode_Layer_Viewer_Animated(QWidget):
         self.layer_list = layer_list
 
     def load_layer(self, index):
+        if not self.layer_list:
+            return
+        
+        if index >= len(self.layer_list) or index < 0:
+            return
+
         self.layer = self.layer_list[index]
         self.overall_x = self.layer.x_data
         self.overall_y = self.layer.y_data

@@ -20,8 +20,8 @@ class Main_Screen(QMainWindow):
         self.file_handler = File_Handler()
 
         # Create program name
-        program_name = "GCode Viewer "
-        program_version = "0.1"
+        program_name = "CNC GCode Viewer "
+        program_version = "1.0"
 
         # Set Name Of Program
         self.setWindowTitle(program_name + program_version)
@@ -36,7 +36,8 @@ class Main_Screen(QMainWindow):
 
         # change taskbar icon
         myappid = program_name + program_version  # arbitrary string
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        if hasattr(ctypes, 'windll'):
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
         # Set name of Window (Starting x, starting y, width, height
         self.setGeometry(180, 180, 1480, 720)

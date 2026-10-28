@@ -1,0 +1,6 @@
+PyQt5
+PyOpenGL
+PyOpenGL_accelerate
+matplotlib
+pyqtgraph<=0.12.4
+
