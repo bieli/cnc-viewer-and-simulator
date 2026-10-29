@@ -1,22 +1,21 @@
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QGridLayout, QLabel,  QWidget,  QPushButton
+from __future__ import annotations
 
-from gcode_viewer.gui.gcode_3d_viewer.gcode_3d_viewer import GCode_3D_Viewer
+from typing import Optional
+
+from PyQt5.QtWidgets import QGridLayout, QWidget
+
+from gcode_viewer.config.settings import Settings
+from gcode_viewer.gui.gcode_3d_viewer.gcode_3d_viewer import GCode3DViewer
 
 
-class Left_Side(QWidget):
-
-    def __init__(self):
+class LeftSide(QWidget):
+    def __init__(self, settings: Optional[Settings] = None) -> None:
         super().__init__()
-
         self.gcode_loaded = False
-        self.initUI()
+        self.gcode_3d_viewer = GCode3DViewer(settings=settings)
+        self._init_ui()
 
-    def initUI(self):
-
-        self.grid = QGridLayout()
-
-        self.gcode_3d_viewer = GCode_3D_Viewer()
-        self.grid.addWidget(self.gcode_3d_viewer, 1, 0)
-
-        self.setLayout(self.grid)
+    def _init_ui(self) -> None:
+        grid = QGridLayout()
+        grid.addWidget(self.gcode_3d_viewer, 1, 0)
+        self.setLayout(grid)

@@ -1,6 +1,6 @@
 PyQt5
 PyOpenGL
-PyOpenGL_accelerate
+PyOpenGL-accelerate
 matplotlib
 pyqtgraph<=0.12.4
-
+numpy
