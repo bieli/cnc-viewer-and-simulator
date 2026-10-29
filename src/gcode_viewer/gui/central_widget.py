@@ -36,7 +36,7 @@ class Central_Widget(QWidget):
         bottom_grid = QGridLayout()
         self.grid.addLayout(bottom_grid, 2, 0, 1, 2)
 
-        self.load_file_button = QPushButton("Load Different GCode File")
+        self.load_file_button = QPushButton("Load G-Code File")
         bottom_grid.addWidget(self.load_file_button, 0, 1)
         self.load_file_button.clicked.connect(self.get_path_to_file)
 

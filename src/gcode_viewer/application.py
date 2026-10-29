@@ -10,7 +10,6 @@ class Application(QApplication):
         
         if file_path:
             main_screen.central_widget.load_gcode_file(file_path)
-            #main_screen.show()
             main_screen.showMaximized()
         else:
             main_screen.start()

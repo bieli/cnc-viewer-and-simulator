@@ -6,7 +6,6 @@ import pyqtgraph.opengl as gl
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-#from PyQt5.QtGui import QVector3D
 
 import numpy as np
 
@@ -23,7 +22,7 @@ class GCode_3D_Viewer(QWidget):
         self.viewer = gl.GLViewWidget()
         layout.addWidget(self.viewer, 1)
 
-        self.viewer.setWindowTitle('STL Viewer')
+        self.viewer.setWindowTitle('Viewer')
         self.viewer.setCameraPosition(distance=250)
 
         g = gl.GLGridItem()
@@ -47,7 +46,6 @@ class GCode_3D_Viewer(QWidget):
         from PyQt5.QtGui import QVector3D
         import math
         
-        # 1. Czyszczenie starego widoku
         target_view = self
         if not hasattr(self, 'addItem'):
             for attr_name in dir(self):
@@ -62,31 +60,24 @@ class GCode_3D_Viewer(QWidget):
         except Exception:
             pass
             
-        # 2. Dynamiczne dodanie siatki stołu CNC na podstawie konfiguracji settings
         try:
             bed_x = float(self.settings.environment.printer.bed_width_x)
             bed_y = float(self.settings.environment.printer.bed_depth_y)
         except Exception:
-            # Wartości awaryjne, jeśli settings nie byłoby dostępne
             bed_x, bed_y = 200.0, 200.0
 
         g = gl.GLGridItem()
-        # Ustawiamy rozmiar pobrany bezpośrednio z konfiguracji settings maszynowej
         g.setSize(bed_x, bed_y, 1.0)
         
-        # Krok siatki: automatycznie 50mm dla dużych pól roboczych, 10mm dla mniejszych
         grid_spacing = 50.0 if bed_x > 400.0 else 10.0
         g.setSpacing(grid_spacing, grid_spacing, 1.0)
         
-        # Przesunięcie środka siatki, aby układ współrzędnych zaczynał się od (0,0) w lewym dolnym rogu
         g.resetTransform()
         g.translate(bed_x / 2.0, bed_y / 2.0, 0.0)
         
-        # Stonowany jasnoszary kolor z lekką przezroczystością, widoczny na czarnym tle
         g.setColor((200, 200, 200, 60))
         target_view.addItem(g)
 
-        # 3. Wyznaczenie globalnego punktu skrajnego dla poprawnego pozycjonowania bazy
         all_x, all_y = [], []
         for layer in layer_list:
             if layer.x_data:
@@ -101,11 +92,9 @@ class GCode_3D_Viewer(QWidget):
         min_x, max_x = min(all_x), max(all_x)
         min_y, max_y = min(all_y), max(all_y)
 
-        # Centrowanie bazy do lewego dolnego rogu stołu roboczego (0,0) dokładnie tak jak w Candle
         offset_x = -min_x
         offset_y = -min_y
 
-        # 4. Iteracja po warstwach i precyzyjne rysowanie linii wektorowych
         for layer in layer_list:
             if not layer.x_data:
                 continue
@@ -114,7 +103,6 @@ class GCode_3D_Viewer(QWidget):
             colors = []
             
             for i in range(len(layer.x_data)):
-                # Bezpieczne pobieranie punktów początkowych i końcowych z krotek
                 x_start = float(layer.x_data[i][0])
                 x_end   = float(layer.x_data[i][1])
                 y_start = float(layer.y_data[i][0])
@@ -122,7 +110,6 @@ class GCode_3D_Viewer(QWidget):
                 z_start = float(layer.z_data[i][0])
                 z_end   = float(layer.z_data[i][1])
 
-                # Czarna magia: Zachowujemy czysty układ XYZ (brak zamiany osi w punktach)
                 points.append([x_start + offset_x, y_start + offset_y, z_start])
                 points.append([x_end + offset_x, y_end + offset_y, z_end])
                 
@@ -136,8 +123,6 @@ class GCode_3D_Viewer(QWidget):
                 line_item = gl.GLLinePlotItem(pos=pts_array, color=clr_array, width=2.0, mode='lines')
                 target_view.addItem(line_item)
 
-        # 5. AUTOMATYCZNE I INTELIGENTNE USTAWIANIE ORAZ OBRACANIE KAMERY (STYL CANDLE)
-        # Obliczamy środek i wymiary przesuniętego detalu
         final_max_x = max_x + offset_x
         final_max_y = max_y + offset_y
         
@@ -145,10 +130,8 @@ class GCode_3D_Viewer(QWidget):
         center_obj_y = final_max_y / 2.0
         
         max_dimension = max(final_max_x, final_max_y)
-        optimal_distance = max_dimension * 1.4  # Margines Zoomu ustawiony na stabilne 75% okna
+        optimal_distance = max_dimension * 1.5
 
-        # Pozycjonujemy kamerę: obrót wokół własnej osi (azimuth=-45) oraz kąt pochylenia (elevation=45)
-        # dopasowuje rzut izometryczny pyqtgraph 1:1 do perspektywy programu Candle
         target_view.setCameraPosition(
             pos=QVector3D(center_obj_x, center_obj_y, 0.0),
             distance=optimal_distance,
@@ -156,34 +139,29 @@ class GCode_3D_Viewer(QWidget):
             azimuth=-45
         )
         
-        # 6. GENEROWANIE BRYŁY FREZU (WALEC Z KOLCEM) STYL CANDLE
         try:
             start_x, start_y, start_z = None, None, None
             
-            # Przeszukujemy warstwy, aby znaleźć pierwszy fizyczny punkt
             for layer in layer_list:
                 if layer.x_data and len(layer.x_data) > 0:
                     first_x_seg = layer.x_data[0]
                     first_y_seg = layer.y_data[0]
                     first_z_seg = layer.z_data[0]
 
-                    # Bezpiecznie pobieramy pierwszą wartość z krotki segmentu
                     start_x = float(first_x_seg[0] if isinstance(first_x_seg, (tuple, list)) else first_x_seg) + offset_x
                     start_y = float(first_y_seg[0] if isinstance(first_y_seg, (tuple, list)) else first_y_seg) + offset_y
                     start_z = float(first_z_seg[0] if isinstance(first_z_seg, (tuple, list)) else first_z_seg)
                     break
 
             if start_x is not None:
-                # Parametry wymiarowe wirtualnego frezu
-                r = 1.5       # Promień frezu (szerokość)
-                h_cyl = 12.0  # Wysokość części walcowej
-                h_cone = 4.0  # Wysokość kolca (ostrza)
-                sides = 16    # Gęstość siatki okręgu
+                r = 1.5
+                h_cyl = 12.0
+                h_cone = 4.0
+                sides = 16
                 
                 verts = []
                 faces = []
                 
-                # --- GENEROWANIE WIERZCHOŁKÓW (Vertices) ---
                 verts.append([0.0, 0.0, 0.0])
                 
                 for i in range(sides):
@@ -196,7 +174,6 @@ class GCode_3D_Viewer(QWidget):
                     
                 verts.append([0.0, 0.0, h_cone + h_cyl])
                 
-                # --- GENEROWANIE ŚCIAN (Faces - Trójkąty) ---
                 for i in range(sides):
                     next_i = (i + 1) % sides
                     faces.append([0, i + 1, next_i + 1])
@@ -219,8 +196,6 @@ class GCode_3D_Viewer(QWidget):
                 faces_np = np.array(faces, dtype=int)
                 tool_md = gl.MeshData(vertexes=verts_np, faces=faces_np)
                 
-                # Zastosowanie jasnego, żywego koloru pomarańczowego z bezpiecznym płaskim shaderem 'flat'
-                # zapobiega to powstawaniu błędów ShaderValidationError
                 tool_mesh = gl.GLMeshItem(meshdata=tool_md, smooth=True, color=(1.0, 0.65, 0.1, 1.0), shader='flat')
                 
                 tool_mesh.translate(start_x, start_y, start_z)

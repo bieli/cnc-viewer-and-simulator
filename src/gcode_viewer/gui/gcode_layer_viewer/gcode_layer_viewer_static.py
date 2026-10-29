@@ -34,10 +34,10 @@ class GCode_Layer_Viewer_Static(QWidget):
         # Czyszczenie starych kolekcji linii z pamięci wykresu
         while self.canvas.axes.collections:
             self.canvas.axes.collections.pop()
-            
+
         # Konfiguracja podpisów osi
-        self.canvas.axes.set_xlabel("Szerokość obiektu X [mm]")
-        self.canvas.axes.set_ylabel("Głębokość frezowania Z [mm]")
+        self.canvas.axes.set_xlabel("Object width X [mm]")
+        self.canvas.axes.set_ylabel("Milling depth Z [mm]")
         self.canvas.axes.grid(True, linestyle="--", alpha=0.5)
 
         global_min_z = 0.0
@@ -118,7 +118,7 @@ class GCode_Layer_Viewer_Static(QWidget):
             # Tekstowa etykieta dla wartości minimalnej po lewej stronie wykresu
             self.canvas.axes.text(0.02, global_min_z, f" Min Z: {global_min_z:.2f} mm", 
                                   transform=self.canvas.axes.get_yaxis_transform(),
-                                  color='darkgreen', weight='bold', va='bottom', ha='left',
+                                  color='darkgreen', weight='bold', va='bottom', ha='left', fontsize=14,
                                   bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=1))
 
             # Linia pozioma dla maksymalnej wysokości (poziom bezpieczny / góra materiału)
@@ -126,7 +126,7 @@ class GCode_Layer_Viewer_Static(QWidget):
             # Tekstowa etykieta dla wartości maksymalnej po lewej stronie wykresu
             self.canvas.axes.text(0.02, global_max_z, f" Max Z: {global_max_z:.2f} mm", 
                                   transform=self.canvas.axes.get_yaxis_transform(),
-                                  color='darkred', weight='bold', va='bottom', ha='left',
+                                  color='darkred', weight='bold', va='bottom', ha='left', fontsize=14,
                                   bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=1))
 
         # 3. Dynamiczne pozycjonowanie kamery / limitów wykresu

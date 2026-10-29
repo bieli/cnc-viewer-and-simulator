@@ -40,6 +40,7 @@ class Change_Environment_Window(QDialog):
 
         self.printer_width_x_entry = QLineEdit()
         grid.addWidget(self.printer_width_x_entry, 2, 1)
+        self.printer_width_x_entry.setFixedWidth(60)
         self.entries_to_check.append(self.printer_width_x_entry)
 
         printer_depth_y_label = QLabel("Print Bed Depth (Y)")
@@ -47,6 +48,7 @@ class Change_Environment_Window(QDialog):
 
         self.printer_depth_y_entry = QLineEdit()
         grid.addWidget(self.printer_depth_y_entry, 3, 1)
+        self.printer_depth_y_entry.setFixedWidth(60)
         self.entries_to_check.append(self.printer_depth_y_entry)
 
         printer_height_z_label = QLabel("Printer Height (Z)")
@@ -54,48 +56,23 @@ class Change_Environment_Window(QDialog):
 
         self.printer_height_z_entry = QLineEdit()
         grid.addWidget(self.printer_height_z_entry, 4, 1)
+        self.printer_height_z_entry.setFixedWidth(60)
         self.entries_to_check.append(self.printer_height_z_entry)
-
-        sponge_label = QLabel("Sponge Dimensions")
-        sponge_label.setAlignment(Qt.AlignCenter)
-        grid.addWidget(sponge_label, 1, 3, 1, 3)
-
-        sponge_width_x_label = QLabel("Sponge Width (X)")
-        grid.addWidget(sponge_width_x_label, 2, 3)
-
-        self.sponge_width_x_entry = QLineEdit()
-        grid.addWidget(self.sponge_width_x_entry, 2, 4)
-        self.entries_to_check.append(self.sponge_width_x_entry)
-
-        sponge_depth_y_label = QLabel("Sponge Depth (Y)")
-        grid.addWidget(sponge_depth_y_label, 3, 3)
-
-        self.sponge_depth_y_entry = QLineEdit()
-        grid.addWidget(self.sponge_depth_y_entry, 3, 4)
-        self.entries_to_check.append(self.sponge_depth_y_entry)
-
-        sponge_height_z_label = QLabel("Sponge Height (Z)")
-        grid.addWidget(sponge_height_z_label, 4, 3)
-
-        self.sponge_height_z_entry = QLineEdit()
-        grid.addWidget(self.sponge_height_z_entry, 4, 4)
-        self.entries_to_check.append(self.sponge_height_z_entry)
 
         for row_printer_dimension in range(2, 5):
             mm_label = QLabel("mm")
             grid.addWidget(mm_label, row_printer_dimension, 2)
-
-        for row_sponge_dimension in range(2, 5):
-            mm_label = QLabel("mm")
-            grid.addWidget(mm_label, row_sponge_dimension, 5)
 
         for entry in self.entries_to_check:
             entry.setMaximumWidth(36)
             entry.setAlignment(Qt.AlignCenter)
 
         accept_button = QPushButton("Accept")
+        cancel_button = QPushButton("Cancel")
         grid.addWidget(accept_button, 5, 1, 1, 3)
+        grid.addWidget(cancel_button, 6, 1, 1, 3)
         accept_button.clicked.connect(self.accept_pressed)
+        cancel_button.clicked.connect(self.close)
 
         self.setLayout(grid)
 
@@ -104,9 +81,6 @@ class Change_Environment_Window(QDialog):
             self.printer_depth_y_entry.setText(str(self.settings.environment.printer.bed_depth_y))
             self.printer_height_z_entry.setText(str(self.settings.environment.printer.height_z))
 
-            self.sponge_width_x_entry.setText(str(self.settings.environment.sponge.width_x))
-            self.sponge_depth_y_entry.setText(str(self.settings.environment.sponge.depth_y))
-            self.sponge_height_z_entry.setText(str(self.settings.environment.sponge.height_z))
 
     def accept_pressed(self):
 
