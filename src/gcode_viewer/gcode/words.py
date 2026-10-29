@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Iterable, List, Optional, Tuple
 
+from gcode_viewer.utils.feedrate import normalize_feedrate_mm_min
+
 
 def strip_comments(line: str) -> str:
     stripped = line.strip()
@@ -84,9 +86,7 @@ def extract_feedrate(words: Iterable[str]) -> Optional[float]:
             value = parse_float_word(word, "F")
             if value is None:
                 continue
-            if value > 10_000.0:
-                value = value / 60.0
-            return float(int(value))
+            return normalize_feedrate_mm_min(value)
     return None
 
 

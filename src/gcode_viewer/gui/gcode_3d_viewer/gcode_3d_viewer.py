@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
@@ -10,70 +9,28 @@ from PyQt5.QtWidgets import QVBoxLayout, QWidget
 
 from gcode_viewer.config.settings import Settings
 from gcode_viewer.gcode.layer import Layer
+from gcode_viewer.utils.endmill_mesh import build_endmill_mesh, mesh_as_arrays
+from gcode_viewer.utils.geometry import (
+    Bounds2D,
+    Point3D,
+    camera_distance_for_bounds,
+    grid_spacing_for_bed,
+    origin_alignment_offset,
+    xy_bounds_from_segments,
+)
 
-Point3D = Tuple[float, float, float]
 DEFAULT_BED_SIZE = 200.0
-
-
-def build_tool_mesh(
-    radius: float = 1.5,
-    cylinder_height: float = 12.0,
-    cone_height: float = 4.0,
-    sides: int = 16,
-) -> Tuple[np.ndarray, np.ndarray]:
-    vertices: List[List[float]] = [[0.0, 0.0, 0.0]]
-
-    for index in range(sides):
-        angle = 2.0 * math.pi * index / sides
-        vertices.append([radius * math.cos(angle), radius * math.sin(angle), cone_height])
-
-    for index in range(sides):
-        angle = 2.0 * math.pi * index / sides
-        vertices.append(
-            [
-                radius * math.cos(angle),
-                radius * math.sin(angle),
-                cone_height + cylinder_height,
-            ]
-        )
-
-    vertices.append([0.0, 0.0, cone_height + cylinder_height])
-
-    faces: List[List[int]] = []
-    for index in range(sides):
-        next_index = (index + 1) % sides
-        faces.append([0, index + 1, next_index + 1])
-
-    for index in range(sides):
-        next_index = (index + 1) % sides
-        p1 = index + 1
-        p2 = next_index + 1
-        p3 = index + 1 + sides
-        p4 = next_index + 1 + sides
-        faces.append([p1, p2, p3])
-        faces.append([p2, p4, p3])
-
-    top_center_index = len(vertices) - 1
-    for index in range(sides):
-        next_index = (index + 1) % sides
-        faces.append([top_center_index, index + 1 + sides, next_index + 1 + sides])
-
-    return np.array(vertices), np.array(faces, dtype=int)
 
 
 def collect_path_bounds(
     layer_list: Sequence[Layer],
 ) -> Optional[Tuple[float, float, float, float]]:
-    all_x: List[float] = []
-    all_y: List[float] = []
-    for layer in layer_list:
-        for segment in layer.x_data:
-            all_x.extend([segment[0], segment[1]])
-        for segment in layer.y_data:
-            all_y.extend([segment[0], segment[1]])
-    if not all_x or not all_y:
+    x_segments = [segment for layer in layer_list for segment in layer.x_data]
+    y_segments = [segment for layer in layer_list for segment in layer.y_data]
+    bounds = xy_bounds_from_segments(x_segments, y_segments)
+    if bounds is None:
         return None
-    return min(all_x), max(all_x), min(all_y), max(all_y)
+    return bounds.min_x, bounds.max_x, bounds.min_y, bounds.max_y
 
 
 def first_toolpath_point(
@@ -129,20 +86,20 @@ class GCode3DViewer(QWidget):
 
         grid = gl.GLGridItem()
         grid.setSize(bed_x, bed_y, 1.0)
-        grid_spacing = 50.0 if bed_x > 400.0 else 10.0
-        grid.setSpacing(grid_spacing, grid_spacing, 1.0)
+        spacing = grid_spacing_for_bed(bed_x)
+        grid.setSpacing(spacing, spacing, 1.0)
         grid.resetTransform()
         grid.translate(bed_x / 2.0, bed_y / 2.0, 0.0)
         grid.setColor((200, 200, 200, 60))
         self.viewer.addItem(grid)
 
-        bounds = collect_path_bounds(layer_list)
-        if bounds is None:
+        bounds_tuple = collect_path_bounds(layer_list)
+        if bounds_tuple is None:
             return
 
-        min_x, max_x, min_y, max_y = bounds
-        offset_x = -min_x
-        offset_y = -min_y
+        min_x, max_x, min_y, max_y = bounds_tuple
+        bounds = Bounds2D(min_x, max_x, min_y, max_y)
+        offset_x, offset_y = origin_alignment_offset(bounds)
 
         for layer in layer_list:
             if not layer.x_data:
@@ -153,8 +110,12 @@ class GCode3DViewer(QWidget):
                 x_start, x_end = layer.x_data[index]
                 y_start, y_end = layer.y_data[index]
                 z_start, z_end = layer.z_data[index]
-                points.append([float(x_start) + offset_x, float(y_start) + offset_y, float(z_start)])
-                points.append([float(x_end) + offset_x, float(y_end) + offset_y, float(z_end)])
+                points.append(
+                    [float(x_start) + offset_x, float(y_start) + offset_y, float(z_start)]
+                )
+                points.append(
+                    [float(x_end) + offset_x, float(y_end) + offset_y, float(z_end)]
+                )
                 color = (
                     layer.pyqtgraph_color[index]
                     if index < len(layer.pyqtgraph_color)
@@ -172,14 +133,13 @@ class GCode3DViewer(QWidget):
                 )
                 self.viewer.addItem(line_item)
 
-        final_max_x = max_x + offset_x
-        final_max_y = max_y + offset_y
-        center_x = final_max_x / 2.0
-        center_y = final_max_y / 2.0
-        max_dimension = max(final_max_x, final_max_y)
+        shifted_width = bounds.width
+        shifted_depth = bounds.depth
+        center_x = shifted_width / 2.0
+        center_y = shifted_depth / 2.0
         self.viewer.setCameraPosition(
             pos=QVector3D(center_x, center_y, 0.0),
-            distance=max_dimension * 1.5,
+            distance=camera_distance_for_bounds(shifted_width, shifted_depth),
             elevation=45,
             azimuth=-45,
         )
@@ -188,8 +148,8 @@ class GCode3DViewer(QWidget):
         if start_point is None:
             return
 
-        vertices, faces = build_tool_mesh()
-        mesh_data = gl.MeshData(vertexes=vertices, faces=faces)
+        vertices, faces = mesh_as_arrays(build_endmill_mesh())
+        mesh_data = gl.MeshData(vertexes=np.array(vertices), faces=np.array(faces, dtype=int))
         tool_mesh = gl.GLMeshItem(
             meshdata=mesh_data,
             smooth=True,

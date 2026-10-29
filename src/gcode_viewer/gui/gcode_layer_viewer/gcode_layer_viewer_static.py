@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import QGridLayout, QWidget
 from gcode_viewer.config.settings import Settings
 from gcode_viewer.gcode.layer import Layer
 from gcode_viewer.gui.gcode_layer_viewer.gcode_canvas import GCodeCanvas
+from gcode_viewer.utils.geometry import padded_limits
 
 MatplotlibColor = Tuple[float, float, float, float]
 
@@ -117,16 +118,15 @@ class GCodeLayerViewerStatic(QWidget):
             global_min_x = 0.0
             global_max_x = float(self.settings.environment.printer.bed_width_x)
 
-        padding_x = max(5.0, (global_max_x - global_min_x) * 0.1)
-        padding_z = max(2.0, (global_max_z - global_min_z) * 0.2)
-
         if self.zoomed_in:
-            self.canvas.axes.set_xlim(global_min_x - padding_x, global_max_x + padding_x)
+            self.canvas.axes.set_xlim(
+                *padded_limits(global_min_x, global_max_x, 0.1, 5.0)
+            )
         else:
             self.canvas.axes.set_xlim(
                 0, float(self.settings.environment.printer.bed_width_x)
             )
 
-        self.canvas.axes.set_ylim(global_min_z - padding_z, global_max_z + padding_z)
+        self.canvas.axes.set_ylim(*padded_limits(global_min_z, global_max_z, 0.2, 2.0))
         self.canvas.draw()
         self.show()

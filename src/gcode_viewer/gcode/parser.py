@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import List, Optional, Sequence, Tuple
 
 from gcode_viewer.gcode.analysis import MachiningStats, analyze_machining
-from gcode_viewer.gcode.geometry import bounds_from_segment, tessellate_arc
 from gcode_viewer.gcode.layer import ColorRGBA, Layer
+from gcode_viewer.utils.arc import tessellate_arc
+from gcode_viewer.utils.geometry import bounds_from_segment
 from gcode_viewer.gcode.words import (
     extract_ij,
     extract_xyz,

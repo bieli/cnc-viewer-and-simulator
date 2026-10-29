@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from gcode_viewer.gcode.analysis import analyze_machining, format_step_z_info
+from gcode_viewer.gcode.analysis import analyze_machining
+from gcode_viewer.utils.step_depth import format_step_z_info
 
 
 def test_analyze_machining_reads_tool_and_spindle() -> None:
@@ -16,6 +17,7 @@ def test_analyze_machining_reads_tool_and_spindle() -> None:
     assert stats.max_feedrate_mm_min == 1200
     assert stats.cutting_time_seconds > 0
     assert "Endmill 6mm" in stats.tool_info
+    assert stats.time_estimation.count(":") == 2
 
 
 def test_override_feedrate_changes_time() -> None:
@@ -29,10 +31,12 @@ def test_override_feedrate_changes_time() -> None:
     assert fast.cutting_time_seconds < slow.cutting_time_seconds
 
 
-def test_format_step_z_info_single_layer() -> None:
-    assert format_step_z_info({-1.0}) == "Step Z: A single working layer"
-
-
-def test_format_step_z_info_multiple_steps() -> None:
-    info = format_step_z_info({-1.0, -2.0, -3.0})
-    assert "Step 1.000mm" in info
+def test_machining_stats_use_utils_step_formatter() -> None:
+    lines = [
+        "G1 Z-1 F1000",
+        "G1 X10",
+        "G1 Z-2",
+        "G1 X20",
+    ]
+    stats = analyze_machining(lines)
+    assert stats.step_z_info == format_step_z_info(stats.unique_z_levels)

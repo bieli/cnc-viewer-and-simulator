@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import math
-from collections import Counter
 from dataclasses import dataclass
-from typing import Iterable, List, Optional, Sequence, Set
+from typing import List, Optional, Sequence, Set
 
 from gcode_viewer.gcode.words import (
     extract_feedrate,
@@ -12,7 +10,9 @@ from gcode_viewer.gcode.words import (
     extract_xyz,
     tokenize,
 )
-
+from gcode_viewer.utils.geometry import distance_3d
+from gcode_viewer.utils.step_depth import format_step_z_info
+from gcode_viewer.utils.time_estimate import format_duration, travel_time_seconds
 
 DEFAULT_CUT_FEEDRATE_MM_MIN = 1000.0
 DEFAULT_RAPID_FEEDRATE_MM_MIN = 600.0
@@ -33,11 +33,7 @@ class MachiningStats:
 
     @property
     def time_estimation(self) -> str:
-        total = self.total_time_seconds
-        hours = int(total // 3600)
-        minutes = int((total % 3600) // 60)
-        seconds = int(total % 60)
-        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        return format_duration(self.total_time_seconds)
 
     @property
     def tool_info(self) -> str:
@@ -54,29 +50,6 @@ class MachiningStats:
     @property
     def step_z_info(self) -> str:
         return format_step_z_info(self.unique_z_levels)
-
-
-def format_step_z_info(unique_z_levels: Iterable[float]) -> str:
-    levels = sorted(set(unique_z_levels), reverse=True)
-    if len(levels) <= 1:
-        return "Step Z: A single working layer"
-
-    step_counts: Counter[float] = Counter()
-    for index in range(len(levels) - 1):
-        step = round(abs(levels[index] - levels[index + 1]), 3)
-        if step > 0.001:
-            step_counts[step] += 1
-
-    total_steps = sum(step_counts.values())
-    if total_steps == 0:
-        return "Step Z: A single working layer"
-
-    lines: List[str] = []
-    for step in sorted(step_counts.keys(), reverse=True):
-        count = step_counts[step]
-        percentage = (count / total_steps) * 100.0
-        lines.append(f"Step {step:.3f}mm: {percentage:.1f}%")
-    return "\n".join(lines)
 
 
 def analyze_machining(
@@ -133,17 +106,15 @@ def analyze_machining(
         if command in {"G1", "G2", "G3"} and next_z <= 0.0:
             unique_z_levels.add(next_z)
 
-        distance = math.sqrt(
-            (next_x - position_x) ** 2
-            + (next_y - position_y) ** 2
-            + (next_z - position_z) ** 2
+        distance = distance_3d(
+            (position_x, position_y, position_z),
+            (next_x, next_y, next_z),
         )
         if distance > 0:
             if command == "G0":
-                rapid_time += (distance / rapid_feedrate) * 60.0
+                rapid_time += travel_time_seconds(distance, rapid_feedrate)
             else:
-                rapid_time_or_cut = (distance / current_feedrate) * 60.0
-                cutting_time += rapid_time_or_cut
+                cutting_time += travel_time_seconds(distance, current_feedrate)
 
         position_x, position_y, position_z = next_x, next_y, next_z
 
