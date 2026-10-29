@@ -14,7 +14,13 @@ class Application(QApplication):
         main_screen = MainScreen()
         if file_path:
             main_screen.central_widget.load_gcode_file(file_path)
-            main_screen.showMaximized()
+            if main_screen.central_widget.right_side.gcode_loaded:
+                main_screen.showMaximized()
+            else:
+                main_screen.close()
+                sys.exit(1)
         else:
             main_screen.start()
+            if not main_screen.central_widget.right_side.gcode_loaded:
+                sys.exit(0)
         sys.exit(self.exec_())

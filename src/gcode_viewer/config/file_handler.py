@@ -6,6 +6,7 @@ from typing import List
 
 from gcode_viewer.config.mapper import SettingsMapper
 from gcode_viewer.config.settings import Settings
+from gcode_viewer.gcode.line import GCodeLine
 
 
 class FileHandler:
@@ -19,10 +20,15 @@ class FileHandler:
         self.icon_png_path = self.icon_path / "app_icon.png"
         self.settings_file_path = self.settings_path / "settings_file.json"
 
-    def read_gcode_file(self, file_path: str | Path) -> List[str]:
+    def read_gcode_file(self, file_path: str | Path) -> List[GCodeLine]:
         path = Path(file_path)
+        lines: List[GCodeLine] = []
         with path.open("r", encoding="utf-8", errors="replace") as handle:
-            return [line.strip() for line in handle if line.strip()]
+            for number, raw_line in enumerate(handle, start=1):
+                text = raw_line.strip()
+                if text:
+                    lines.append(GCodeLine(number=number, text=text))
+        return lines
 
     def read_settings(self) -> Settings:
         with self.settings_file_path.open(encoding="utf-8") as handle:

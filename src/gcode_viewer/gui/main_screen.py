@@ -33,8 +33,11 @@ class MainScreen(QMainWindow):
     def start(self) -> None:
         startup_window = StartupWindow()
         file_path = startup_window.get_initial_file_path()
-        if file_path:
-            self.central_widget.load_gcode_file(file_path)
+        if not file_path:
+            self.close()
+            return
+        self.central_widget.load_gcode_file(file_path)
+        if self.central_widget.right_side.gcode_loaded:
             self.showMaximized()
         else:
             self.close()

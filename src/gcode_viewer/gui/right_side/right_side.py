@@ -3,10 +3,20 @@ from __future__ import annotations
 from typing import List, Optional, Sequence
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QWidget
+from PyQt5.QtWidgets import (
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QWidget,
+)
 
 from gcode_viewer.config.settings import Settings
+from gcode_viewer.gcode.errors import GCodeValidationError
 from gcode_viewer.gcode.layer import Layer
+from gcode_viewer.gcode.line import GCodeLine
 from gcode_viewer.gcode.parser import LayerParser
 from gcode_viewer.gui.gcode_layer_viewer.gcode_layer_viewer_static import GCodeLayerViewerStatic
 
@@ -17,7 +27,7 @@ class RightSide(QWidget):
         self.settings = settings
         self.gcode_loaded = False
         self.layer_list: Optional[List[Layer]] = None
-        self.raw_lines: Optional[List[str]] = None
+        self.raw_lines: Optional[List[GCodeLine]] = None
         self.tool_title_label = QLabel("Active tool and CNC properties:")
         self.tool_info_label = QLabel("No tool loaded!")
         self.input_title_label = QLabel("Check new working feed rate [mm/min]:")
@@ -123,7 +133,7 @@ class RightSide(QWidget):
 
         self.refresh_gcode_viewer()
 
-    def set_raw_lines(self, line_list: Sequence[str]) -> None:
+    def set_raw_lines(self, line_list: Sequence[GCodeLine]) -> None:
         self.raw_lines = list(line_list)
 
     def recalculate_time(self) -> None:
@@ -136,10 +146,20 @@ class RightSide(QWidget):
             self.time_info_label.setText("Incorrect feed!")
             return
 
+        if user_feedrate <= 0:
+            self.time_info_label.setText("Incorrect feed!")
+            return
+
         parser = LayerParser()
-        new_layers = parser.parse_layer_list(
-            self.raw_lines, override_feedrate=user_feedrate
-        )
+        try:
+            new_layers = parser.parse_layer_list(
+                self.raw_lines, override_feedrate=user_feedrate
+            )
+        except GCodeValidationError as exc:
+            message = str(exc)
+            print(message, flush=True)
+            QMessageBox.critical(self, "G-code validation error", message)
+            return
         if not new_layers:
             return
 

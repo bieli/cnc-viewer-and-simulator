@@ -2,10 +2,15 @@ from __future__ import annotations
 
 from typing import Any, List, Optional
 
-from PyQt5.QtWidgets import QFileDialog, QGridLayout, QPushButton, QWidget
+from PyQt5.QtWidgets import QFileDialog, QGridLayout, QMessageBox, QPushButton, QWidget
 
 from gcode_viewer.config.file_handler import FileHandler
 from gcode_viewer.config.settings import Settings
+from gcode_viewer.gcode.errors import (
+    GCodeValidationError,
+    GCodeValidationIssue,
+    format_validation_issues,
+)
 from gcode_viewer.gcode.layer import Layer
 from gcode_viewer.gcode.parser import LayerParser
 from gcode_viewer.gui.left_side.left_side import LeftSide
@@ -56,9 +61,31 @@ class CentralWidget(QWidget):
     def load_gcode_file(self, file_path: str) -> None:
         line_list = self.file_handler.read_gcode_file(file_path)
         parser = LayerParser()
-        layer_list = parser.parse_layer_list(line_list)
+        try:
+            layer_list = parser.parse_layer_list(line_list)
+        except GCodeValidationError as exc:
+            if exc.file_path is None:
+                exc.file_path = file_path
+            self._show_validation_error(exc)
+            return
         self.right_side.set_raw_lines(line_list)
         self.load_new_file_on_screen(layer_list)
+        if parser.warnings:
+            self._show_validation_warnings(parser.warnings, file_path)
+
+    def _show_validation_error(self, error: GCodeValidationError) -> None:
+        message = str(error)
+        print(message, flush=True)
+        QMessageBox.critical(self, "G-code validation error", message)
+
+    def _show_validation_warnings(
+        self,
+        warnings: List[GCodeValidationIssue],
+        file_path: str,
+    ) -> None:
+        message = format_validation_issues(warnings, file_path=file_path)
+        print(message, flush=True)
+        QMessageBox.warning(self, "G-code validation warning", message)
 
     def load_new_file_on_screen(self, layer_list: List[Layer]) -> None:
         self.right_side.load_new_gcode(layer_list)

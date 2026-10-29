@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence
 
 from gcode_viewer.gcode.analysis import MachiningStats, analyze_machining
+from gcode_viewer.gcode.errors import GCodeValidationIssue
 from gcode_viewer.gcode.layer import ColorRGBA, Layer
-from gcode_viewer.utils.arc import tessellate_arc
-from gcode_viewer.utils.geometry import bounds_from_segment
+from gcode_viewer.gcode.line import GCodeLine, GCodeSource, normalize_gcode_lines
 from gcode_viewer.gcode.words import (
     extract_ij,
     extract_xyz,
@@ -13,6 +13,8 @@ from gcode_viewer.gcode.words import (
     parse_float_word,
     tokenize,
 )
+from gcode_viewer.utils.arc import tessellate_arc
+from gcode_viewer.utils.geometry import bounds_from_segment
 
 DEFAULT_BOUNDS = 1e24
 RAPID_COLOR: ColorRGBA = (1.0, 0.3, 0.3, 0.8)
@@ -39,13 +41,15 @@ class LayerParser:
         self.tool_info = ""
         self.time_estimation_str = ""
         self.step_z_info_str = ""
+        self.warnings: List[GCodeValidationIssue] = []
 
     def parse_layer_list(
         self,
-        string_list: Sequence[str],
+        string_list: Sequence[GCodeSource],
         override_feedrate: Optional[float] = None,
     ) -> List[Layer]:
-        stats = analyze_machining(string_list, override_feedrate=override_feedrate)
+        lines = normalize_gcode_lines(string_list)
+        stats = analyze_machining(lines, override_feedrate=override_feedrate)
         self._apply_stats(stats)
 
         self.from_x = self.from_y = self.from_z = 0.0
@@ -53,7 +57,7 @@ class LayerParser:
         self._reset_bounds()
 
         layers: List[Layer] = []
-        for index, layer_lines in enumerate(self.split_into_layers(string_list)):
+        for index, layer_lines in enumerate(self.split_into_layers(lines)):
             layer = self.parse_single_layer(layer_lines)
             layer.number = index
             layer.tool_info = self.tool_info
@@ -69,22 +73,19 @@ class LayerParser:
         self.tool_info = stats.tool_info
         self.time_estimation_str = stats.time_estimation
         self.step_z_info_str = stats.step_z_info
+        self.warnings = list(stats.warnings)
 
-    def split_into_layers(self, lines: Sequence[str]) -> List[List[str]]:
-        result: List[List[str]] = []
-        current_layer: List[str] = []
+    def split_into_layers(self, lines: Sequence[GCodeSource]) -> List[List[GCodeLine]]:
+        result: List[List[GCodeLine]] = []
+        current_layer: List[GCodeLine] = []
         last_seen_z: Optional[float] = None
 
-        for line in lines:
-            stripped = line.strip()
-            if not stripped:
-                continue
-
-            if is_comment_line(stripped):
+        for line in normalize_gcode_lines(lines):
+            if is_comment_line(line.text):
                 current_layer.append(line)
                 continue
 
-            words = tokenize(stripped)
+            words = tokenize(line.text)
             if words and words[0].upper() in {"G0", "G1", "G2", "G3"}:
                 for word in words:
                     current_z = parse_float_word(word, "Z")
@@ -104,21 +105,21 @@ class LayerParser:
 
     def parse_single_layer(
         self,
-        lines: Sequence[str],
+        lines: Sequence[GCodeSource],
         layer_color: ColorRGBA = OTHER_COLOR,
         layer_min_max_offset: float = 2.5,
         rapid_color: ColorRGBA = RAPID_COLOR,
         cut_color: ColorRGBA = CUT_COLOR,
         g2_angle_ratio: float = 2.0,
     ) -> Layer:
-        layer = Layer(layer_as_string=list(lines))
+        normalized = normalize_gcode_lines(lines)
+        layer = Layer(layer_as_string=[line.text for line in normalized])
 
-        for line in lines:
-            stripped = line.strip()
-            if not stripped or is_comment_line(stripped):
+        for line in normalized:
+            if is_comment_line(line.text):
                 continue
 
-            words = tokenize(stripped)
+            words = tokenize(line.text)
             if not words:
                 continue
 
@@ -126,7 +127,7 @@ class LayerParser:
             if command in MOVEMENT_COMMANDS:
                 self._append_movement(
                     layer=layer,
-                    line=line,
+                    line=line.text,
                     words=words,
                     command=command,
                     rapid_color=rapid_color,
@@ -139,7 +140,7 @@ class LayerParser:
                 layer.z_data.append((self.to_z, self.to_z))
                 layer.pyqtgraph_color.append(layer_color)
                 layer.matplot_color.append("k")
-                layer.move_data.append(line)
+                layer.move_data.append(line.text)
 
         layer.min_x = self.min_x - layer_min_max_offset
         layer.max_x = self.max_x + layer_min_max_offset

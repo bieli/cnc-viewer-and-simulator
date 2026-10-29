@@ -62,4 +62,5 @@ def test_read_gcode_file(sample_freecad_nc: Path, tmp_path: Path) -> None:
     handler = FileHandler(resources_root=tmp_path)
     lines = handler.read_gcode_file(sample_freecad_nc)
     assert lines
-    assert any(line.startswith("G1") for line in lines)
+    assert any(line.text.startswith("G1") for line in lines)
+    assert all(line.number >= 1 for line in lines)
