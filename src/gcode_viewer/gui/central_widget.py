@@ -26,6 +26,9 @@ class CentralWidget(QWidget):
         self.menu_bar = MenuBar(self.settings)
         self.left_side = LeftSide(self.settings)
         self.right_side = RightSide(self.settings)
+        self.right_side.on_feedrate_changed = (
+            self.left_side.gcode_3d_viewer.set_simulation_feedrate
+        )
         self.load_file_button = QPushButton("Load G-Code File")
         self._init_ui()
 
@@ -91,6 +94,9 @@ class CentralWidget(QWidget):
         self.right_side.load_new_gcode(layer_list)
         self.right_side.gcode_loaded = True
         self.left_side.gcode_3d_viewer.load_gcode(layer_list)
+        feedrate = self.right_side.current_feedrate()
+        if feedrate is not None:
+            self.left_side.gcode_3d_viewer.set_simulation_feedrate(feedrate)
 
     def on_menu_event(
         self,

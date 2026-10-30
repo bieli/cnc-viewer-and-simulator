@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Sequence
+from typing import Callable, List, Optional, Sequence
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
@@ -20,6 +20,8 @@ from gcode_viewer.gcode.line import GCodeLine
 from gcode_viewer.gcode.parser import LayerParser
 from gcode_viewer.gui.gcode_layer_viewer.gcode_layer_viewer_static import GCodeLayerViewerStatic
 
+FeedrateChangedCallback = Callable[[float], None]
+
 
 class RightSide(QWidget):
     def __init__(self, settings: Settings) -> None:
@@ -28,6 +30,7 @@ class RightSide(QWidget):
         self.gcode_loaded = False
         self.layer_list: Optional[List[Layer]] = None
         self.raw_lines: Optional[List[GCodeLine]] = None
+        self.on_feedrate_changed: Optional[FeedrateChangedCallback] = None
         self.tool_title_label = QLabel("Active tool and CNC properties:")
         self.tool_info_label = QLabel("No tool loaded!")
         self.input_title_label = QLabel("Check new working feed rate [mm/min]:")
@@ -177,6 +180,17 @@ class RightSide(QWidget):
         )
         self.tool_info_label.setText(updated_info)
         self.step_z_info_label.setText(new_layers[0].step_z_info)
+        if self.on_feedrate_changed is not None:
+            self.on_feedrate_changed(user_feedrate)
+
+    def current_feedrate(self) -> Optional[float]:
+        try:
+            value = float(self.feedrate_input.text().strip())
+        except ValueError:
+            return None
+        if value <= 0:
+            return None
+        return value
 
     def refresh_gcode_viewer(self) -> None:
         self.gcode_layer_viewer_static.load_layer(0)
