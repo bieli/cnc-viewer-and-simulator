@@ -24,6 +24,34 @@ def tokenize(line: str) -> List[str]:
     return cleaned.split() if cleaned else []
 
 
+MOTION_COMMANDS = frozenset({"G0", "G00", "G1", "G01", "G2", "G02", "G3", "G03", "G5"})
+
+
+def normalize_motion_command(command: str) -> Optional[str]:
+    """Map G00/G01/G02/G03 aliases to canonical G0/G1/G2/G3/G5."""
+    upper = command.upper()
+    if upper not in MOTION_COMMANDS:
+        return None
+    if upper in {"G0", "G00"}:
+        return "G0"
+    if upper in {"G1", "G01"}:
+        return "G1"
+    if upper in {"G2", "G02"}:
+        return "G2"
+    if upper in {"G3", "G03"}:
+        return "G3"
+    return "G5"
+
+
+def extract_motion_command(words: Iterable[str]) -> Optional[str]:
+    """Return motion command, skipping line numbers (N…) and other leading words."""
+    for word in words:
+        normalized = normalize_motion_command(word)
+        if normalized is not None:
+            return normalized
+    return None
+
+
 def parse_float_word(word: str, letter: str) -> Optional[float]:
     if not word.upper().startswith(letter.upper()):
         return None

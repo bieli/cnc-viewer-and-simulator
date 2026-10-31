@@ -73,5 +73,8 @@ def test_simulator_reset_and_jump_to_end() -> None:
     assert sim.is_finished
     assert sim.current_position() == (2.0, 0.0, 0.0)
     sim.reset()
-    assert sim.is_at_start
+    assert sim.is_before_first_move
     assert sim.current_position() == (0.0, 0.0, 0.0)
+    sim.go_to_safe_start()
+    assert sim.is_at_start
+    assert sim.current_position() == (1.0, 0.0, 0.0)

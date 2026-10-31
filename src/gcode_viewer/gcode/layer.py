@@ -25,3 +25,4 @@ class Layer:
     tool_info: str = ""
     time_estimation: str = ""
     step_z_info: str = ""
+    material_size_info: str = ""

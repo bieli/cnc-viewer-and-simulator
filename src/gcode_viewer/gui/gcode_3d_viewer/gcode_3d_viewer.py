@@ -22,12 +22,16 @@ from gcode_viewer.utils.geometry import (
 )
 from gcode_viewer.utils.simulation import (
     DEFAULT_CUT_FEED_MM_MIN,
+    SimSegment,
     ToolpathSimulator,
     build_simulation_segments,
 )
 
 DEFAULT_BED_SIZE = 200.0
 TIMER_INTERVAL_MS = 33
+PENDING_PATH_COLOR = (0.70, 0.72, 0.76, 0.95)
+RAPID_PATH_COLOR = (1.0, 0.3, 0.3, 0.8)
+CUT_PATH_COLOR = (0.0, 1.0, 0.5, 1.0)
 
 
 def collect_path_bounds(
@@ -41,6 +45,10 @@ def collect_path_bounds(
     return bounds.min_x, bounds.max_x, bounds.min_y, bounds.max_y
 
 
+def segment_base_color(segment: SimSegment) -> Tuple[float, float, float, float]:
+    return RAPID_PATH_COLOR if segment.is_rapid else CUT_PATH_COLOR
+
+
 class GCode3DViewer(QWidget):
     def __init__(self, settings: Optional[Settings] = None) -> None:
         super().__init__()
@@ -49,6 +57,10 @@ class GCode3DViewer(QWidget):
         self.controls = SimulationControls()
         self.simulator = ToolpathSimulator()
         self.tool_mesh: Optional[gl.GLMeshItem] = None
+        self.path_item: Optional[gl.GLLinePlotItem] = None
+        self._path_positions: Optional[np.ndarray] = None
+        self._path_base_colors: Optional[np.ndarray] = None
+        self._trail_mode = False
         self._playing = False
         self._timer = QTimer(self)
         self._timer.setInterval(TIMER_INTERVAL_MS)
@@ -82,6 +94,10 @@ class GCode3DViewer(QWidget):
     def _clear_scene(self) -> None:
         self.pause()
         self.tool_mesh = None
+        self.path_item = None
+        self._path_positions = None
+        self._path_base_colors = None
+        self._trail_mode = False
         for item in list(self.viewer.items):
             self.viewer.removeItem(item)
 
@@ -103,9 +119,13 @@ class GCode3DViewer(QWidget):
     def play(self) -> None:
         if not self.simulator.segments:
             return
-        if self.simulator.is_finished:
+        if self.simulator.is_finished or self.simulator.is_at_start:
+            # Restart from work origin so the first approach to the corner is visible,
+            # then animate toward the safe corner start.
             self.simulator.reset()
             self._update_tool_pose()
+        self._trail_mode = True
+        self._refresh_path_colors()
         self._playing = True
         self.controls.set_playing(True)
         self._timer.start()
@@ -119,17 +139,23 @@ class GCode3DViewer(QWidget):
 
     def stop(self) -> None:
         self.pause()
-        self.simulator.reset()
+        # Idle pose: corner / clearance after the first approach — never buried at X0Y0Z0.
+        self.simulator.go_to_safe_start()
+        self._trail_mode = False
         self._update_tool_pose()
-        self.controls.set_progress_value(0)
+        self._refresh_path_colors()
+        self.controls.set_progress_value(self.simulator.segment_index)
         self._refresh_status()
 
     def next_step(self) -> None:
         if not self.simulator.segments:
             return
         self.pause()
+        if not self._trail_mode:
+            self._trail_mode = True
         self.simulator.step_forward()
         self._update_tool_pose()
+        self._refresh_path_colors()
         self._sync_slider()
         self._refresh_status()
 
@@ -137,8 +163,11 @@ class GCode3DViewer(QWidget):
         if not self.simulator.segments:
             return
         self.pause()
+        if not self._trail_mode:
+            self._trail_mode = True
         self.simulator.step_backward()
         self._update_tool_pose()
+        self._refresh_path_colors()
         self._sync_slider()
         self._refresh_status()
 
@@ -146,8 +175,10 @@ class GCode3DViewer(QWidget):
         if not self.simulator.segments:
             return
         self.pause()
+        self._trail_mode = True
         self.simulator.jump_to_end()
         self._update_tool_pose()
+        self._refresh_path_colors()
         self._sync_slider()
         self._refresh_status()
 
@@ -155,13 +186,16 @@ class GCode3DViewer(QWidget):
         if not self.simulator.segments:
             return
         self.pause()
+        self._trail_mode = True
         self.simulator.set_segment_index(index)
         self._update_tool_pose()
+        self._refresh_path_colors()
         self._refresh_status()
 
     def _on_timer_tick(self) -> None:
         still_running = self.simulator.advance(TIMER_INTERVAL_MS / 1000.0)
         self._update_tool_pose()
+        self._refresh_path_colors()
         self._sync_slider()
         self._refresh_status()
         if not still_running:
@@ -181,6 +215,30 @@ class GCode3DViewer(QWidget):
         self.controls.set_status(
             f"Simulation ({state}): {self.simulator.status_text()}{feed_text}"
         )
+
+    def _segment_is_done(self, index: int) -> bool:
+        if index < self.simulator.segment_index:
+            return True
+        if index > self.simulator.segment_index:
+            return False
+        return self.simulator.progress > 0.0
+
+    def _refresh_path_colors(self) -> None:
+        if self.path_item is None or self._path_base_colors is None:
+            return
+        if not self._trail_mode:
+            self.path_item.setData(color=self._path_base_colors)
+            return
+
+        colors = np.array(self._path_base_colors, copy=True)
+        pending = np.array(PENDING_PATH_COLOR, dtype=float)
+        segment_count = len(self.simulator.segments)
+        for index in range(segment_count):
+            if self._segment_is_done(index):
+                continue
+            colors[index * 2] = pending
+            colors[index * 2 + 1] = pending
+        self.path_item.setData(color=colors)
 
     def _update_tool_pose(self) -> None:
         if self.tool_mesh is None:
@@ -206,6 +264,20 @@ class GCode3DViewer(QWidget):
         tool_mesh.translate(position[0], position[1], position[2])
         return tool_mesh
 
+    def _build_path_arrays(
+        self,
+        segments: Sequence[SimSegment],
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        points: List[List[float]] = []
+        colors: List[Tuple[float, float, float, float]] = []
+        for segment in segments:
+            points.append([segment.start[0], segment.start[1], segment.start[2]])
+            points.append([segment.end[0], segment.end[1], segment.end[2]])
+            color = segment_base_color(segment)
+            colors.append(color)
+            colors.append(color)
+        return np.array(points, dtype=float), np.array(colors, dtype=float)
+
     def load_gcode(self, layer_list: Sequence[Layer]) -> None:
         self._clear_scene()
         bed_x, bed_y = self._bed_size()
@@ -230,47 +302,6 @@ class GCode3DViewer(QWidget):
         bounds = Bounds2D(min_x, max_x, min_y, max_y)
         offset_x, offset_y = origin_alignment_offset(bounds)
 
-        for layer in layer_list:
-            if not layer.x_data:
-                continue
-            points: List[List[float]] = []
-            colors: List[Tuple[float, float, float, float]] = []
-            for index in range(len(layer.x_data)):
-                x_start, x_end = layer.x_data[index]
-                y_start, y_end = layer.y_data[index]
-                z_start, z_end = layer.z_data[index]
-                points.append(
-                    [float(x_start) + offset_x, float(y_start) + offset_y, float(z_start)]
-                )
-                points.append(
-                    [float(x_end) + offset_x, float(y_end) + offset_y, float(z_end)]
-                )
-                color = (
-                    layer.pyqtgraph_color[index]
-                    if index < len(layer.pyqtgraph_color)
-                    else (0.0, 1.0, 0.5, 1.0)
-                )
-                colors.append(color)
-                colors.append(color)
-
-            if points:
-                line_item = gl.GLLinePlotItem(
-                    pos=np.array(points),
-                    color=np.array(colors),
-                    width=2.0,
-                    mode="lines",
-                )
-                self.viewer.addItem(line_item)
-
-        shifted_width = bounds.width
-        shifted_depth = bounds.depth
-        self.viewer.setCameraPosition(
-            pos=QVector3D(shifted_width / 2.0, shifted_depth / 2.0, 0.0),
-            distance=camera_distance_for_bounds(shifted_width, shifted_depth),
-            elevation=45,
-            azimuth=-45,
-        )
-
         previous_feed = self.simulator.override_cut_feedrate_mm_min
         segments = build_simulation_segments(layer_list, offset_x, offset_y)
         self.simulator = ToolpathSimulator(
@@ -282,6 +313,28 @@ class GCode3DViewer(QWidget):
         self.controls.set_progress_value(0)
 
         if segments:
-            self.tool_mesh = self._create_tool_mesh(segments[0].start)
+            positions, base_colors = self._build_path_arrays(segments)
+            self._path_positions = positions
+            self._path_base_colors = base_colors
+            self.path_item = gl.GLLinePlotItem(
+                pos=positions,
+                color=base_colors,
+                width=2.0,
+                mode="lines",
+            )
+            self.viewer.addItem(self.path_item)
+            self.simulator.go_to_safe_start()
+            start_pose = self.simulator.current_position() or segments[0].end
+            self.tool_mesh = self._create_tool_mesh(start_pose)
             self.viewer.addItem(self.tool_mesh)
+            self.controls.set_progress_value(self.simulator.segment_index)
+
+        shifted_width = bounds.width
+        shifted_depth = bounds.depth
+        self.viewer.setCameraPosition(
+            pos=QVector3D(shifted_width / 2.0, shifted_depth / 2.0, 0.0),
+            distance=camera_distance_for_bounds(shifted_width, shifted_depth),
+            elevation=45,
+            azimuth=-45,
+        )
         self._refresh_status()

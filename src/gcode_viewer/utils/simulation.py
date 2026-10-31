@@ -46,11 +46,25 @@ class ToolpathSimulator:
 
     @property
     def is_at_start(self) -> bool:
+        if not self.segments:
+            return True
+        return self.segment_index <= 0 and self.progress >= 1.0
+
+    @property
+    def is_before_first_move(self) -> bool:
         return self.segment_index <= 0 and self.progress <= 0.0
 
     def reset(self) -> None:
         self.segment_index = 0
         self.progress = 0.0
+
+    def go_to_safe_start(self) -> None:
+        """Place the tool at the end of the first approach move (not at work origin)."""
+        if not self.segments:
+            self.reset()
+            return
+        self.segment_index = 0
+        self.progress = 1.0
 
     def jump_to_end(self) -> None:
         if not self.segments:

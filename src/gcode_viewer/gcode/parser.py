@@ -8,6 +8,7 @@ from gcode_viewer.gcode.layer import ColorRGBA, Layer
 from gcode_viewer.gcode.line import GCodeLine, GCodeSource, normalize_gcode_lines
 from gcode_viewer.gcode.words import (
     extract_ij,
+    extract_motion_command,
     extract_xyz,
     is_comment_line,
     parse_float_word,
@@ -41,6 +42,7 @@ class LayerParser:
         self.tool_info = ""
         self.time_estimation_str = ""
         self.step_z_info_str = ""
+        self.material_size_info_str = ""
         self.warnings: List[GCodeValidationIssue] = []
 
     def parse_layer_list(
@@ -63,6 +65,7 @@ class LayerParser:
             layer.tool_info = self.tool_info
             layer.time_estimation = self.time_estimation_str
             layer.step_z_info = self.step_z_info_str
+            layer.material_size_info = self.material_size_info_str
             layers.append(layer)
         return layers
 
@@ -73,6 +76,7 @@ class LayerParser:
         self.tool_info = stats.tool_info
         self.time_estimation_str = stats.time_estimation
         self.step_z_info_str = stats.step_z_info
+        self.material_size_info_str = stats.material_size_info
         self.warnings = list(stats.warnings)
 
     def split_into_layers(self, lines: Sequence[GCodeSource]) -> List[List[GCodeLine]]:
@@ -86,7 +90,7 @@ class LayerParser:
                 continue
 
             words = tokenize(line.text)
-            if words and words[0].upper() in {"G0", "G1", "G2", "G3"}:
+            if extract_motion_command(words) is not None:
                 for word in words:
                     current_z = parse_float_word(word, "Z")
                     if current_z is None:
@@ -123,8 +127,8 @@ class LayerParser:
             if not words:
                 continue
 
-            command = words[0].upper()
-            if command in MOVEMENT_COMMANDS:
+            command = extract_motion_command(words)
+            if command is not None and command in MOVEMENT_COMMANDS:
                 self._append_movement(
                     layer=layer,
                     line=line.text,

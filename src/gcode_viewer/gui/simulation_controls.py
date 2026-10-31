@@ -16,6 +16,11 @@ from PyQt5.QtWidgets import (
 PlayCallback = Callable[[], None]
 SeekCallback = Callable[[int], None]
 
+RECALCULATE_BUTTON_STYLE = (
+    "font-weight: bold; font-size: 15px; padding: 5px 10px; "
+    "background-color: #0066cc; color: white; border: none; border-radius: 4px;"
+)
+
 
 class SimulationControls(QWidget):
     def __init__(self) -> None:
@@ -43,12 +48,14 @@ class SimulationControls(QWidget):
 
     def _init_ui(self) -> None:
         root = QVBoxLayout()
-        root.setContentsMargins(0, 4, 0, 0)
+        root.setContentsMargins(0, 6, 0, 0)
+        root.setSpacing(6)
 
-        self.status_label.setStyleSheet("font-size: 13px; color: #333;")
+        self.status_label.setStyleSheet("font-size: 14px; color: #333;")
         root.addWidget(self.status_label)
 
         buttons = QHBoxLayout()
+        buttons.setSpacing(8)
         for button, handler in (
             (self.play_button, self._emit_play),
             (self.pause_button, self._emit_pause),
@@ -57,13 +64,17 @@ class SimulationControls(QWidget):
             (self.next_button, self._emit_next),
             (self.end_button, self._emit_end),
         ):
-            button.setStyleSheet(
-                "font-weight: bold; padding: 4px 8px; background-color: #37474f; "
-                "color: white; border: none; border-radius: 3px;"
-            )
+            button.setStyleSheet(RECALCULATE_BUTTON_STYLE)
+            button.setMinimumHeight(36)
+            button.setMinimumWidth(84)
             button.clicked.connect(handler)
             buttons.addWidget(button)
 
+        speed_label = QLabel("Speed")
+        speed_label.setStyleSheet("font-size: 15px; font-weight: bold; color: #444;")
+        self.speed_combo.setStyleSheet(
+            "font-size: 15px; padding: 4px 8px; min-height: 28px;"
+        )
         self.speed_combo.addItem("0.5x", 0.5)
         self.speed_combo.addItem("1x", 1.0)
         self.speed_combo.addItem("5x", 5.0)
@@ -72,7 +83,7 @@ class SimulationControls(QWidget):
         self.speed_combo.addItem("100x", 100.0)
         self.speed_combo.setCurrentIndex(2)
         self.speed_combo.currentIndexChanged.connect(self._emit_speed)
-        buttons.addWidget(QLabel("Speed"))
+        buttons.addWidget(speed_label)
         buttons.addWidget(self.speed_combo)
         buttons.addStretch(1)
         root.addLayout(buttons)
@@ -80,6 +91,7 @@ class SimulationControls(QWidget):
         self.progress_slider.setMinimum(0)
         self.progress_slider.setMaximum(0)
         self.progress_slider.setEnabled(False)
+        self.progress_slider.setMinimumHeight(22)
         self.progress_slider.sliderPressed.connect(self._on_slider_pressed)
         self.progress_slider.sliderReleased.connect(self._on_slider_released)
         self.progress_slider.valueChanged.connect(self._on_slider_changed)

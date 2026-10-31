@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from gcode_viewer.gcode.analysis import analyze_machining
 from gcode_viewer.utils.step_depth import format_step_z_info
 
@@ -40,3 +42,24 @@ def test_machining_stats_use_utils_step_formatter() -> None:
     ]
     stats = analyze_machining(lines)
     assert stats.step_z_info == format_step_z_info(stats.unique_z_levels)
+
+
+def test_analyze_machining_reports_required_material_size() -> None:
+    lines = [
+        "G0 X0 Y0 Z5",
+        "G1 Z-2 F1000",
+        "G1 X40 Y10",
+        "G1 Z5",
+        "G0 X100 Y100",
+    ]
+    stats = analyze_machining(lines)
+    assert stats.stock_bounds is not None
+    # Rapids / Z retracts must not inflate the required stock box.
+    assert stats.stock_bounds.size_x == pytest.approx(40.0)
+    assert stats.stock_bounds.size_y == pytest.approx(10.0)
+    assert stats.stock_bounds.size_z == pytest.approx(2.0)
+    assert stats.stock_bounds.min_z == pytest.approx(-2.0)
+    assert stats.stock_bounds.max_z == pytest.approx(0.0)
+    assert "X: 40.00 mm" in stats.material_size_info
+    assert "Y: 10.00 mm" in stats.material_size_info
+    assert "Z: 2.00 mm" in stats.material_size_info

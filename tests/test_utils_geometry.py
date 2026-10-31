@@ -4,9 +4,12 @@ import pytest
 
 from gcode_viewer.utils.geometry import (
     Bounds2D,
+    Bounds3D,
     bounds_from_segment,
     camera_distance_for_bounds,
     distance_3d,
+    expand_bounds3d,
+    format_stock_size,
     grid_spacing_for_bed,
     origin_alignment_offset,
     padded_limits,
@@ -44,6 +47,19 @@ def test_xy_bounds_empty() -> None:
 
 def test_origin_alignment_offset() -> None:
     assert origin_alignment_offset(Bounds2D(12.0, 40.0, -5.0, 10.0)) == (-12.0, 5.0)
+
+
+def test_bounds3d_and_stock_size_format() -> None:
+    bounds = expand_bounds3d(None, 0.0, 0.0, 0.0)
+    bounds = expand_bounds3d(bounds, 20.0, 10.0, -5.0)
+    assert bounds == Bounds3D(0.0, 20.0, 0.0, 10.0, -5.0, 0.0)
+    assert bounds.size_x == 20.0
+    assert bounds.size_y == 10.0
+    assert bounds.size_z == 5.0
+    text = format_stock_size(bounds)
+    assert "X: 20.00 mm" in text
+    assert "Z: 5.00 mm" in text
+    assert format_stock_size(None).startswith("X: --")
 
 
 def test_camera_distance_for_bounds() -> None:

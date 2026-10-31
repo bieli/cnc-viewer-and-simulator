@@ -28,6 +28,59 @@ class Bounds2D:
         return (self.min_x + self.max_x) / 2.0, (self.min_y + self.max_y) / 2.0
 
 
+@dataclass(frozen=True)
+class Bounds3D:
+    """Axis-aligned envelope of toolpath points (typically cutting moves)."""
+
+    min_x: float
+    max_x: float
+    min_y: float
+    max_y: float
+    min_z: float
+    max_z: float
+
+    @property
+    def size_x(self) -> float:
+        return self.max_x - self.min_x
+
+    @property
+    def size_y(self) -> float:
+        return self.max_y - self.min_y
+
+    @property
+    def size_z(self) -> float:
+        return self.max_z - self.min_z
+
+
+def format_stock_size(bounds: Optional[Bounds3D]) -> str:
+    """Human-readable required stock size from a cutting envelope."""
+    if bounds is None:
+        return "X: --\nY: --\nZ: --"
+    return (
+        f"X: {bounds.size_x:.2f} mm  ({bounds.min_x:.2f} … {bounds.max_x:.2f})\n"
+        f"Y: {bounds.size_y:.2f} mm  ({bounds.min_y:.2f} … {bounds.max_y:.2f})\n"
+        f"Z: {bounds.size_z:.2f} mm  ({bounds.min_z:.2f} … {bounds.max_z:.2f})"
+    )
+
+
+def expand_bounds3d(
+    bounds: Optional[Bounds3D],
+    x: float,
+    y: float,
+    z: float,
+) -> Bounds3D:
+    if bounds is None:
+        return Bounds3D(x, x, y, y, z, z)
+    return Bounds3D(
+        min(bounds.min_x, x),
+        max(bounds.max_x, x),
+        min(bounds.min_y, y),
+        max(bounds.max_y, y),
+        min(bounds.min_z, z),
+        max(bounds.max_z, z),
+    )
+
+
 def distance_3d(a: Point3D, b: Point3D) -> float:
     return math.sqrt((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2 + (b[2] - a[2]) ** 2)
 

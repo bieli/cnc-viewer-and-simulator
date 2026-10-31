@@ -4,12 +4,15 @@ from typing import Callable, List, Optional, Sequence
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
+    QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QScrollArea,
+    QSizePolicy,
     QWidget,
 )
 
@@ -38,6 +41,8 @@ class RightSide(QWidget):
         self.recalc_button = QPushButton("Recalculate")
         self.time_title_label = QLabel("Estimated machining/cutting time:")
         self.time_info_label = QLabel("--:--:--")
+        self.material_title_label = QLabel("Required material size (toolpath):")
+        self.material_info_label = QLabel("X: --\nY: --\nZ: --")
         self.step_z_title_label = QLabel("Depth steps in material:")
         self.step_z_info_label = QLabel("Step Z: --")
         self.gcode_layer_viewer_static = GCodeLayerViewerStatic(self.settings)
@@ -95,6 +100,22 @@ class RightSide(QWidget):
         grid.addWidget(self.time_info_label, row, 0)
         row += 1
 
+        self.material_title_label.setStyleSheet(
+            "font-weight: bold; font-size: 16px; color: #444; margin-top: 5px;"
+        )
+        grid.addWidget(self.material_title_label, row, 0)
+        row += 1
+
+        self.material_info_label.setStyleSheet(
+            "font-size: 15px; color: #6a1b9a; font-weight: bold; padding: 6px; "
+            "background-color: #f3e5f5; border-radius: 4px;"
+        )
+        self.material_info_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        grid.addWidget(self.material_info_label, row, 0)
+        row += 1
+
         self.step_z_title_label.setStyleSheet(
             "font-weight: bold; font-size: 16px; color: #444; margin-top: 5px;"
         )
@@ -103,9 +124,34 @@ class RightSide(QWidget):
 
         self.step_z_info_label.setStyleSheet(
             "font-size: 15px; color: #b78103; font-weight: bold; padding: 6px; "
-            "background-color: #fffde7; border-radius: 4px;"
+            "background-color: #fffde7;"
         )
-        grid.addWidget(self.step_z_info_label, row, 0)
+        self.step_z_info_label.setWordWrap(True)
+        self.step_z_info_label.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.step_z_info_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+
+        self.step_z_scroll = QScrollArea()
+        self.step_z_scroll.setWidgetResizable(True)
+        self.step_z_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.step_z_scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.step_z_scroll.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+        self.step_z_scroll.setMinimumHeight(96)
+        self.step_z_scroll.setMaximumHeight(160)
+        self.step_z_scroll.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+        self.step_z_scroll.setStyleSheet(
+            "QScrollArea { background-color: #fffde7; border-radius: 4px; }"
+            "QScrollBar:vertical { width: 12px; }"
+        )
+        self.step_z_scroll.setWidget(self.step_z_info_label)
+        grid.addWidget(self.step_z_scroll, row, 0)
         row += 1
 
         grid.setRowMinimumHeight(row, 10)
@@ -118,6 +164,7 @@ class RightSide(QWidget):
         row += 1
 
         grid.addWidget(self.gcode_layer_viewer_static, row, 0)
+        grid.setRowStretch(row, 1)
         self.setLayout(grid)
 
     def load_new_gcode(self, layer_list: Sequence[Layer]) -> None:
@@ -128,10 +175,14 @@ class RightSide(QWidget):
             first_layer = layer_list[0]
             self.tool_info_label.setText(first_layer.tool_info)
             self.time_info_label.setText(first_layer.time_estimation)
+            self.material_info_label.setText(
+                first_layer.material_size_info or "X: --\nY: --\nZ: --"
+            )
             self.step_z_info_label.setText(first_layer.step_z_info)
         else:
             self.tool_info_label.setText("Cutter parameters not detected")
             self.time_info_label.setText("--:--:--")
+            self.material_info_label.setText("X: --\nY: --\nZ: --")
             self.step_z_info_label.setText("Step Z: --")
 
         self.refresh_gcode_viewer()
@@ -179,6 +230,9 @@ class RightSide(QWidget):
             f"\nFeedrate (manual): {user_feedrate:.0f} mm/min ({feedrate_mms:.1f} mm/s)"
         )
         self.tool_info_label.setText(updated_info)
+        self.material_info_label.setText(
+            new_layers[0].material_size_info or "X: --\nY: --\nZ: --"
+        )
         self.step_z_info_label.setText(new_layers[0].step_z_info)
         if self.on_feedrate_changed is not None:
             self.on_feedrate_changed(user_feedrate)
