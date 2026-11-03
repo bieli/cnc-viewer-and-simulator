@@ -6,6 +6,11 @@
 
 # CNC viewer and simulator
 
+<p align="center">
+  <img src="img/ss01.png">
+</p>
+
+
 **Check your CAM toolpaths before you cut.**
 
 CNC G-Code Viewer is a desktop app for hobby CNC millers, FreeCAD Path/CAM users, and anyone who exports `.nc` / `.gcode` files and wants a fast visual sanity check before sending them to the machine.
