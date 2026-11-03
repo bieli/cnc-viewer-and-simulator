@@ -1,14 +1,10 @@
 <p align="center">
-  <img src="img/gcode_viewer_logo.JPG" alt="G-Code Viewer logo" width="118" height="124">
-</p>
-
-<p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
   <a href=".github/workflows/ci.yml"><img src="https://img.shields.io/badge/CI-pytest%20%7C%20mypy-success" alt="CI"></a>
   <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python 3.9+">
 </p>
 
-# CNC G-Code Viewer
+# CNC viewer and simulator
 
 **Check your CAM toolpaths before you cut.**
 
