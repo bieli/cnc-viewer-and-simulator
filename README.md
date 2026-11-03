@@ -45,10 +45,10 @@ Green segments are cutting moves; red segments are rapid/traverse moves.
 ### Install
 
 ```bash
-git clone https://github.com/johanneshagspiel/gcode-viewer.git
-cd gcode-viewer
+git clone https://github.com/bieli/cnc-viewer-and-simulator.git
+cd cnc-viewer-and-simulator
 python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -r requirements.txt
 pip install -e .
 ```
@@ -87,7 +87,7 @@ GitHub Actions runs **pytest** and **mypy** on every push/PR.
 ## Project layout
 
 ```
-src/gcode_viewer/
+src/cnc-viewer-and-simulator/
   gcode/      # parsing, geometry, machining analysis (unit-tested)
   config/     # settings + file I/O
   gui/        # PyQt5 UI
@@ -103,4 +103,5 @@ tests/        # pytest suite + sample FreeCAD-style fixture
 
 ## Credits
 
-Originally created by [Johannes Hagspiel](https://github.com/johanneshagspiel). Maintained as an open-source tool for the CNC / FreeCAD community.
+Originally created by [Johannes Hagspiel](https://github.com/johanneshagspiel), recreated by [Marcin Bielak](https://github.com/bieli). 
+Maintained as an open-source tool for the CNC / FreeCAD community.
