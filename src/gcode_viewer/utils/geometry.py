@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Iterable, Optional, Sequence, Tuple
+from typing import Iterable, Optional, Tuple
 
 Point3D = Tuple[float, float, float]
 Segment = Tuple[float, float]

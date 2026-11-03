@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence
 
 from gcode_viewer.gcode.layer import Layer
 from gcode_viewer.gcode.words import extract_feedrate, tokenize
