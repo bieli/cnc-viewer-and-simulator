@@ -20,7 +20,7 @@ class MainScreen(QMainWindow):
         self._init_ui()
 
     def _init_ui(self) -> None:
-        title = f"CNC G-Code Viewer {__version__}"
+        title = f"CNC G-Code Viewer and Simulator {__version__}"
         self.setWindowTitle(title)
         self.setWindowIcon(QIcon(str(self.file_handler.icon_png_path)))
         self.setFont(QFont("Sans Serif", 12))
