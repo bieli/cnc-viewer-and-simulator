@@ -20,6 +20,15 @@ RECALCULATE_BUTTON_STYLE = (
     "font-weight: bold; font-size: 15px; padding: 5px 10px; "
     "background-color: #0066cc; color: white; border: none; border-radius: 4px;"
 )
+RECORD_BUTTON_STYLE = (
+    "font-weight: bold; font-size: 15px; padding: 5px 10px; "
+    "background-color: #c62828; color: white; border: none; border-radius: 4px;"
+)
+RECORD_BUTTON_ACTIVE_STYLE = (
+    "font-weight: bold; font-size: 15px; padding: 5px 10px; "
+    "background-color: #ad1457; color: white; border: 2px solid #ffcdd2; "
+    "border-radius: 4px;"
+)
 
 
 class SimulationControls(QWidget):
@@ -28,6 +37,7 @@ class SimulationControls(QWidget):
         self.on_play: Optional[PlayCallback] = None
         self.on_pause: Optional[PlayCallback] = None
         self.on_stop: Optional[PlayCallback] = None
+        self.on_record: Optional[PlayCallback] = None
         self.on_next: Optional[PlayCallback] = None
         self.on_prev: Optional[PlayCallback] = None
         self.on_to_end: Optional[PlayCallback] = None
@@ -38,12 +48,14 @@ class SimulationControls(QWidget):
         self.play_button = QPushButton("Play")
         self.pause_button = QPushButton("Pause")
         self.stop_button = QPushButton("Stop")
+        self.record_button = QPushButton("Recording")
         self.prev_button = QPushButton("Prev")
         self.next_button = QPushButton("Next")
         self.end_button = QPushButton("End")
         self.speed_combo = QComboBox()
         self.progress_slider = QSlider(Qt.Orientation.Horizontal)
         self._seeking = False
+        self._recording = False
         self._init_ui()
 
     def _init_ui(self) -> None:
@@ -60,15 +72,26 @@ class SimulationControls(QWidget):
             (self.play_button, self._emit_play),
             (self.pause_button, self._emit_pause),
             (self.stop_button, self._emit_stop),
+            (self.record_button, self._emit_record),
             (self.prev_button, self._emit_prev),
             (self.next_button, self._emit_next),
             (self.end_button, self._emit_end),
         ):
-            button.setStyleSheet(RECALCULATE_BUTTON_STYLE)
+            style = (
+                RECORD_BUTTON_STYLE
+                if button is self.record_button
+                else RECALCULATE_BUTTON_STYLE
+            )
+            button.setStyleSheet(style)
             button.setMinimumHeight(36)
             button.setMinimumWidth(84)
             button.clicked.connect(handler)
             buttons.addWidget(button)
+        self.record_button.setToolTip(
+            "Start Play and record the 3D view to MP4 in the current directory. "
+            "Stop ends recording (mouse orbit is included)."
+        )
+        self.record_button.setMinimumWidth(110)
 
         speed_label = QLabel("Speed")
         speed_label.setStyleSheet("font-size: 15px; font-weight: bold; color: #444;")
@@ -99,8 +122,21 @@ class SimulationControls(QWidget):
         self.setLayout(root)
 
     def set_playing(self, playing: bool) -> None:
-        self.play_button.setEnabled(not playing)
+        self.play_button.setEnabled(not playing and not self._recording)
         self.pause_button.setEnabled(playing)
+        self.record_button.setEnabled(not self._recording)
+
+    def set_recording(self, recording: bool) -> None:
+        self._recording = recording
+        if recording:
+            self.record_button.setText("Recording…")
+            self.record_button.setStyleSheet(RECORD_BUTTON_ACTIVE_STYLE)
+            self.record_button.setEnabled(False)
+            self.play_button.setEnabled(False)
+        else:
+            self.record_button.setText("Recording")
+            self.record_button.setStyleSheet(RECORD_BUTTON_STYLE)
+            self.record_button.setEnabled(True)
 
     def set_status(self, text: str) -> None:
         self.status_label.setText(text)
@@ -133,6 +169,10 @@ class SimulationControls(QWidget):
     def _emit_stop(self) -> None:
         if self.on_stop:
             self.on_stop()
+
+    def _emit_record(self) -> None:
+        if self.on_record:
+            self.on_record()
 
     def _emit_prev(self) -> None:
         if self.on_prev:

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 import pyqtgraph.opengl as gl
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QVector3D
-from PyQt5.QtWidgets import QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QMessageBox, QVBoxLayout, QWidget
 
 from gcode_viewer.config.settings import Settings
 from gcode_viewer.gcode.layer import Layer
@@ -20,6 +21,12 @@ from gcode_viewer.utils.geometry import (
     origin_alignment_offset,
     xy_bounds_from_segments,
 )
+from gcode_viewer.utils.recording import (
+    DEFAULT_RECORD_FPS,
+    SimulationRecorder,
+    default_recording_path,
+    grab_widget_rgb_frame,
+)
 from gcode_viewer.utils.simulation import (
     DEFAULT_CUT_FEED_MM_MIN,
     SimSegment,
@@ -29,6 +36,7 @@ from gcode_viewer.utils.simulation import (
 
 DEFAULT_BED_SIZE = 200.0
 TIMER_INTERVAL_MS = 33
+RECORD_INTERVAL_MS = 33
 PENDING_PATH_COLOR = (0.70, 0.72, 0.76, 0.95)
 RAPID_PATH_COLOR = (1.0, 0.3, 0.3, 0.8)
 CUT_PATH_COLOR = (0.0, 1.0, 0.5, 1.0)
@@ -62,9 +70,15 @@ class GCode3DViewer(QWidget):
         self._path_base_colors: Optional[np.ndarray] = None
         self._trail_mode = False
         self._playing = False
+        self._recording = False
+        self._recorder: Optional[SimulationRecorder] = None
+        self._last_recording_path: Optional[Path] = None
         self._timer = QTimer(self)
         self._timer.setInterval(TIMER_INTERVAL_MS)
         self._timer.timeout.connect(self._on_timer_tick)
+        self._record_timer = QTimer(self)
+        self._record_timer.setInterval(RECORD_INTERVAL_MS)
+        self._record_timer.timeout.connect(self._on_record_tick)
         self._wire_controls()
         self._init_ui()
 
@@ -72,12 +86,14 @@ class GCode3DViewer(QWidget):
         self.controls.on_play = self.play
         self.controls.on_pause = self.pause
         self.controls.on_stop = self.stop
+        self.controls.on_record = self.start_recording
         self.controls.on_next = self.next_step
         self.controls.on_prev = self.prev_step
         self.controls.on_to_end = self.jump_to_end
         self.controls.on_seek = self.seek_segment
         self.controls.on_speed_changed = self.set_speed_multiplier
         self.controls.set_playing(False)
+        self.controls.set_recording(False)
 
     def _init_ui(self) -> None:
         layout = QVBoxLayout()
@@ -92,6 +108,7 @@ class GCode3DViewer(QWidget):
         self.viewer.addItem(grid)
 
     def _clear_scene(self) -> None:
+        self._finalize_recording(notify=False)
         self.pause()
         self.tool_mesh = None
         self.path_item = None
@@ -136,6 +153,37 @@ class GCode3DViewer(QWidget):
         self.controls.set_playing(False)
         self._refresh_status()
 
+    def start_recording(self) -> None:
+        if self._recording:
+            return
+        if not self.simulator.segments:
+            QMessageBox.information(
+                self,
+                "Nothing to record",
+                "Load a G-code file before recording the simulation.",
+            )
+            return
+        output_path = default_recording_path()
+        try:
+            recorder = SimulationRecorder(output_path, fps=DEFAULT_RECORD_FPS)
+            recorder.start()
+        except Exception as exc:  # noqa: BLE001 - surface ffmpeg/imageio setup issues
+            QMessageBox.critical(
+                self,
+                "Recording failed",
+                f"Could not start MP4 recorder:\n{exc}",
+            )
+            return
+
+        self._recorder = recorder
+        self._recording = True
+        self._last_recording_path = output_path
+        self.controls.set_recording(True)
+        self._record_timer.start()
+        self._capture_recording_frame()
+        self.play()
+        self._refresh_status()
+
     def stop(self) -> None:
         self.pause()
         # Idle pose: corner on stock top (before raise), ready for clearance travel.
@@ -144,6 +192,7 @@ class GCode3DViewer(QWidget):
         self._update_tool_pose()
         self._refresh_path_colors()
         self.controls.set_progress_value(self.simulator.segment_index)
+        self._finalize_recording(notify=True)
         self._refresh_status()
 
     def next_step(self) -> None:
@@ -199,6 +248,75 @@ class GCode3DViewer(QWidget):
         self._refresh_status()
         if not still_running:
             self.pause()
+            self._finalize_recording(notify=True)
+
+    def _on_record_tick(self) -> None:
+        if not self._recording:
+            return
+        self._capture_recording_frame()
+
+    def _capture_recording_frame(self) -> None:
+        if self._recorder is None or not self._recorder.is_open:
+            return
+        frame = grab_widget_rgb_frame(self.viewer)
+        if frame is None:
+            return
+        try:
+            self._recorder.add_frame(frame)
+        except Exception as exc:  # noqa: BLE001
+            message = f"Could not write video frame:\n{exc}"
+            self._recording = False
+            self._record_timer.stop()
+            self.controls.set_recording(False)
+            if self._recorder is not None:
+                try:
+                    self._recorder.close()
+                except Exception:  # noqa: BLE001
+                    pass
+                self._recorder = None
+            QMessageBox.critical(self, "Recording failed", message)
+
+    def _finalize_recording(self, notify: bool) -> None:
+        if not self._recording and self._recorder is None:
+            self.controls.set_recording(False)
+            return
+        self._record_timer.stop()
+        self._recording = False
+        self.controls.set_recording(False)
+        recorder = self._recorder
+        self._recorder = None
+        saved_path: Optional[Path] = None
+        frame_count = 0
+        if recorder is not None:
+            frame_count = recorder.frame_count
+            try:
+                # Capture one last frame with final pose/colors.
+                self._update_tool_pose()
+                self._refresh_path_colors()
+                if recorder.is_open:
+                    frame = grab_widget_rgb_frame(self.viewer)
+                    if frame is not None:
+                        recorder.add_frame(frame)
+                        frame_count = recorder.frame_count
+                saved_path = recorder.close()
+            except Exception as exc:  # noqa: BLE001
+                if notify:
+                    QMessageBox.critical(
+                        self,
+                        "Recording failed",
+                        f"Could not finalize MP4:\n{exc}",
+                    )
+                return
+        self._last_recording_path = saved_path
+        if notify and saved_path is not None:
+            QMessageBox.information(
+                self,
+                "Recording saved",
+                (
+                    f"Simulation recording saved:\n{saved_path.resolve()}\n\n"
+                    f"Frames: {frame_count}"
+                ),
+            )
 
     def _sync_slider(self) -> None:
         self.controls.set_progress_value(self.simulator.segment_index)
@@ -210,9 +328,18 @@ class GCode3DViewer(QWidget):
             if feed is not None
             else f" | cut feed default {DEFAULT_CUT_FEED_MM_MIN:.0f} mm/min"
         )
-        state = "playing" if self._playing else "paused"
+        if self._recording:
+            state = "recording"
+        elif self._playing:
+            state = "playing"
+        else:
+            state = "paused"
+        recording_text = ""
+        if self._recording and self._last_recording_path is not None:
+            recording_text = f" | MP4 {self._last_recording_path.name}"
         self.controls.set_status(
-            f"Simulation ({state}): {self.simulator.status_text()}{feed_text}"
+            f"Simulation ({state}): {self.simulator.status_text()}"
+            f"{feed_text}{recording_text}"
         )
 
     def _segment_is_done(self, index: int) -> bool:

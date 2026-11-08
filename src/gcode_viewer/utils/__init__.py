@@ -15,6 +15,12 @@ from gcode_viewer.utils.geometry import (
     padded_limits,
     xy_bounds_from_segments,
 )
+from gcode_viewer.utils.recording import (
+    SimulationRecorder,
+    default_recording_path,
+    grab_widget_rgb_frame,
+    qimage_to_rgb_array,
+)
 from gcode_viewer.utils.step_depth import StepDepthStats, analyze_z_steps, format_step_z_info
 from gcode_viewer.utils.time_estimate import format_duration, travel_time_seconds
 
@@ -40,4 +46,8 @@ __all__ = [
     "format_step_z_info",
     "format_duration",
     "travel_time_seconds",
+    "SimulationRecorder",
+    "default_recording_path",
+    "grab_widget_rgb_frame",
+    "qimage_to_rgb_array",
 ]

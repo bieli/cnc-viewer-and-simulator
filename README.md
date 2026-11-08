@@ -38,6 +38,7 @@ Green = cutting move (`G1`/`G2`/`G3`). Red = rapid / traverse (`G0`).
 | **3D toolpath viewer** | Interactive OpenGL scene of the full path on a configurable machine bed |
 | **Cut vs rapid coloring** | Candle-style green cuts and red rapids, including `N`-prefixed FreeCAD/CAMotics lines |
 | **Toolpath simulation** | Play / Pause / Stop / Prev / Next / End, speed multiplier, timeline scrubber |
+| **MP4 recording** | **Recording** starts Play and writes `cnc_simulation_*.mp4` in the working directory (3D view + mouse orbit + path colors); **Stop** ends the file |
 | **Simulation trail** | Pending path greys out as the virtual tool advances; restore full colors on Stop |
 | **Animated endmill** | Tool mesh follows the path so you can see pose at every segment |
 | **Safe idle pose** | After Stop, tool sits at the first approach / clearance pose — not buried at mid-stock `X0 Y0 Z0` |
