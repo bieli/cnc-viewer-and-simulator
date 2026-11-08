@@ -104,7 +104,7 @@ def choose_clearance_z(max_cut_z: float, lines: Sequence[str]) -> float:
 
 
 def find_first_cut_approach_xy(lines: Sequence[str]) -> Tuple[float, float]:
-    """Modal XY at the first cutting move (G1/G2/G3) — the first process point."""
+    """Modal XY at the first cutting move (G1/G2/G3) - the first process point."""
     position_x = 0.0
     position_y = 0.0
     position_z = 0.0

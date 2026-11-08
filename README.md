@@ -22,7 +22,7 @@
 
 **Validate FreeCAD CAM G-code before you waste a blank.**
 
-Built for hobby CNC mills and FreeCAD Path/CAM users who post-process to `.nc` / `.gcode` and want a fast, visual second opinion — on the toolpath, clearances, depth steps, stock size, and feeds — **before** the machine starts cutting.
+Built for hobby CNC mills and FreeCAD Path/CAM users who post-process to `.nc` / `.gcode` and want a fast, visual second opinion - on the toolpath, clearances, depth steps, stock size, and feeds - **before** the machine starts cutting.
 
 Export from FreeCAD (or another CAM), open the file here, scrub the path like a machine sim, fix surprises early, then send the job to Candle / GRBL / your controller with more confidence.
 
@@ -30,12 +30,12 @@ Export from FreeCAD (or another CAM), open the file here, scrub the path like a 
 
 FreeCAD CAM is powerful, but the post-processed file is what the mill actually runs. Common gotchas this app helps catch:
 
-- Adaptive / Hybrid jobs with **`F0`** (unset HorizFeed/VertFeed) — soft warnings instead of a silent bad estimate
-- **Rapids and retracts above stock** (red) vs real cuts (green) — including lines with `N…` block numbers
+- Adaptive / Hybrid jobs with **`F0`** (unset HorizFeed/VertFeed) - soft warnings instead of a silent bad estimate
+- **Rapids and retracts above stock** (red) vs real cuts (green) - including lines with `N…` block numbers
 - Tool starting or dwelling in a weird place vs a safe corner / clearance approach
 - Unexpected **Z step-downs** or depth that is deeper than your stock
-- “How big a blank do I need?” — **required material X / Y / Z** from the cutting envelope
-- “How long will this take if I run 2000 mm/min?” — **recalculate time** with a trial feed
+- “How big a blank do I need?” - **required material X / Y / Z** from the cutting envelope
+- “How long will this take if I run 2000 mm/min?” - **recalculate time** with a trial feed
 
 Green = cutting move (`G1`/`G2`/`G3`). Red = rapid / traverse (`G0`).
 
@@ -49,7 +49,7 @@ Green = cutting move (`G1`/`G2`/`G3`). Red = rapid / traverse (`G0`).
 | **MP4 recording** | **Recording** starts Play and writes `cnc_simulation_*.mp4` in the working directory (3D view + mouse orbit + path colors); **Stop** ends the file |
 | **Simulation trail** | Pending path greys out as the virtual tool advances; restore full colors on Stop |
 | **Animated endmill** | Tool mesh follows the path so you can see pose at every segment |
-| **Safe idle pose** | After Stop, tool sits at the first approach / clearance pose — not buried at mid-stock `X0 Y0 Z0` |
+| **Safe idle pose** | After Stop, tool sits at the first approach / clearance pose - not buried at mid-stock `X0 Y0 Z0` |
 | **2D depth cross-section** | X–Z plot with Min Z / Max Z markers for a quick depth sanity check |
 | **Depth steps in material** | Scrollable list of Z step-downs and their share of the job |
 | **Required stock size** | Estimated material **X × Y × Z** from the cutting envelope (not inflated by clearances) |
@@ -70,7 +70,7 @@ Green = cutting move (`G1`/`G2`/`G3`). Red = rapid / traverse (`G0`).
 4. Optionally click **Set CNC start: left corner + max cut Z** to rewrite the lead-in (creates `*.bak` once)
 5. In the side panel: confirm **stock size**, **depth steps**, tool/spindle/feed, and estimated time
 6. Run **Play** (or scrub) to walk the path; pause on anything suspicious
-7. If FreeCAD left `F0`, set a real feed and hit **Recalculate** — or fix feeds in FreeCAD and re-export
+7. If FreeCAD left `F0`, set a real feed and hit **Recalculate** - or fix feeds in FreeCAD and re-export
 8. Only then send the file to the CNC controller
 
 ## Quick start

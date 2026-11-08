@@ -63,7 +63,7 @@ class MachiningStats:
             feedrate_mms = DEFAULT_CUT_FEEDRATE_MM_MIN / 60.0
             lines.append(
                 f"Feedrate: default {DEFAULT_CUT_FEEDRATE_MM_MIN:.0f} mm/min "
-                f"({feedrate_mms:.1f} mm/s) — file has F0/invalid F"
+                f"({feedrate_mms:.1f} mm/s) - file has F0/invalid F"
             )
         return "\n".join(lines)
 
@@ -193,7 +193,7 @@ def analyze_machining(
                 cutting_xy, position_x, position_y, position_z
             )
             cutting_xy = expand_bounds3d(cutting_xy, next_x, next_y, next_z)
-            # Z: engaged depths only — skip retracts and clearance-band moves.
+            # Z: engaged depths only - skip retracts and clearance-band moves.
             xy_moved = (
                 abs(next_x - position_x) > 1e-9 or abs(next_y - position_y) > 1e-9
             )
