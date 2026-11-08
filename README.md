@@ -49,6 +49,7 @@ Green = cutting move (`G1`/`G2`/`G3`). Red = rapid / traverse (`G0`).
 | **Arc support** | `G2` / `G3` tessellated for display and simulation |
 | **Layer split by Z** | Path grouped when Z levels change |
 | **Machine envelope** | Configure bed width / depth / Z for your mill |
+| **CNC safe start rewrite** | Shifts WCS to **left-near corner (0,0)**; idle on **stock top**, then **raise**, rapid above material to first process XY, then cut; keeps `file.bak` once |
 | **Formats** | `.nc`, `.gcode`, `.ngc` |
 
 ## Typical FreeCAD workflow
@@ -56,10 +57,11 @@ Green = cutting move (`G1`/`G2`/`G3`). Red = rapid / traverse (`G0`).
 1. Finish the job in FreeCAD Path/CAM and post-process to `.nc`
 2. Open the file in CNC Viewer and Simulator (or pass the path on the CLI)
 3. In 3D: check overall shape, **red** clearances above stock, and that the first move is a safe approach
-4. In the side panel: confirm **stock size**, **depth steps**, tool/spindle/feed, and estimated time
-5. Run **Play** (or scrub) to walk the path; pause on anything suspicious
-6. If FreeCAD left `F0`, set a real feed and hit **Recalculate** — or fix feeds in FreeCAD and re-export
-7. Only then send the file to the CNC controller
+4. Optionally click **Set CNC start: left corner + max cut Z** to rewrite the lead-in (creates `*.bak` once)
+5. In the side panel: confirm **stock size**, **depth steps**, tool/spindle/feed, and estimated time
+6. Run **Play** (or scrub) to walk the path; pause on anything suspicious
+7. If FreeCAD left `F0`, set a real feed and hit **Recalculate** — or fix feeds in FreeCAD and re-export
+8. Only then send the file to the CNC controller
 
 ## Quick start
 

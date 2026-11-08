@@ -45,26 +45,29 @@ class ToolpathSimulator:
         return self.segment_index >= len(self.segments) - 1 and self.progress >= 1.0
 
     @property
-    def is_at_start(self) -> bool:
-        if not self.segments:
-            return True
-        return self.segment_index <= 0 and self.progress >= 1.0
-
-    @property
     def is_before_first_move(self) -> bool:
         return self.segment_index <= 0 and self.progress <= 0.0
+
+    @property
+    def is_at_start(self) -> bool:
+        """True when idle at the beginning of the toolpath (stock-top / pre-raise)."""
+        if not self.segments:
+            return True
+        return self.is_before_first_move
 
     def reset(self) -> None:
         self.segment_index = 0
         self.progress = 0.0
 
     def go_to_safe_start(self) -> None:
-        """Place the tool at the end of the first approach move (not at work origin)."""
-        if not self.segments:
-            self.reset()
-            return
-        self.segment_index = 0
-        self.progress = 1.0
+        """Idle at the start of the path: corner / stock top before the raise.
+
+        After a CNC safe-start rewrite, (X0 Y0 Z_stock_top) is the corner on
+        material. The first moves then raise and travel above stock. Parking at
+        clearance (end of the first lift) caused a confusing dip back down to
+        material when Play restarted from the beginning.
+        """
+        self.reset()
 
     def jump_to_end(self) -> None:
         if not self.segments:

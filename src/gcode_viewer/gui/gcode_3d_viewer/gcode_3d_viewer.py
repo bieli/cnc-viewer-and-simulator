@@ -120,8 +120,7 @@ class GCode3DViewer(QWidget):
         if not self.simulator.segments:
             return
         if self.simulator.is_finished or self.simulator.is_at_start:
-            # Restart from work origin so the first approach to the corner is visible,
-            # then animate toward the safe corner start.
+            # Restart at stock-top corner; first motion is raise, then clearance travel.
             self.simulator.reset()
             self._update_tool_pose()
         self._trail_mode = True
@@ -139,7 +138,7 @@ class GCode3DViewer(QWidget):
 
     def stop(self) -> None:
         self.pause()
-        # Idle pose: corner / clearance after the first approach — never buried at X0Y0Z0.
+        # Idle pose: corner on stock top (before raise), ready for clearance travel.
         self.simulator.go_to_safe_start()
         self._trail_mode = False
         self._update_tool_pose()

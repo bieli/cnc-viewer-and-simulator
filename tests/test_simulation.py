@@ -77,4 +77,5 @@ def test_simulator_reset_and_jump_to_end() -> None:
     assert sim.current_position() == (0.0, 0.0, 0.0)
     sim.go_to_safe_start()
     assert sim.is_at_start
-    assert sim.current_position() == (1.0, 0.0, 0.0)
+    # Idle at the beginning of the first move (stock-top / pre-raise), not mid-air.
+    assert sim.current_position() == (0.0, 0.0, 0.0)
