@@ -53,13 +53,13 @@ def test_parse_n_prefixed_retract_and_rapid_above_material() -> None:
     ]
     parser = LayerParser()
     layers = parser.parse_layer_list(lines)
-    segments = [
-        (color, z, move)
-        for layer in layers
+    segments = []
+    for layer in layers:
+        assert len(layer.matplot_color) == len(layer.z_data) == len(layer.move_data)
         for color, z, move in zip(
-            layer.matplot_color, layer.z_data, layer.move_data, strict=True
-        )
-    ]
+            layer.matplot_color, layer.z_data, layer.move_data
+        ):
+            segments.append((color, z, move))
     assert any(color == "g" and max(z) >= 5.0 for color, z, _ in segments)
     assert any(color == "r" and min(z) >= 5.0 for color, z, _ in segments)
     assert any("G0" in move for _, _, move in segments)
