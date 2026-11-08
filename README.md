@@ -8,8 +8,16 @@
 # CNC Viewer and Simulator
 
 
+## CNC Viewer and Simulator screenshot example opened G-CODE (file from included examples/wave.gcode)
+
 <p align="center">
   <img src="img/ss01.png" alt="CNC Viewer and Simulator screenshot">
+</p>
+
+## CNC Viewer and Simulator MP4 recording example
+
+<p align="center">
+  <img src="img/cnc_simulation_20261108_125901.gif" alt="CNC Viewer and Simulator MP4 recording example">
 </p>
 
 **Validate FreeCAD CAM G-code before you waste a blank.**
