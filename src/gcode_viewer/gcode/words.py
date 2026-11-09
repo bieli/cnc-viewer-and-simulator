@@ -1,8 +1,18 @@
 from __future__ import annotations
 
+import re
 from typing import Iterable, List, Optional, Tuple
 
 from gcode_viewer.utils.feedrate import normalize_feedrate_mm_min
+
+_TOOL_DIAMETER_PATTERNS = (
+    re.compile(
+        r"(?:tool\s*diameter|diameter|ø)\s*[:=]?\s*(\d+(?:\.\d+)?)\s*mm?",
+        re.IGNORECASE,
+    ),
+    re.compile(r"endmill\s+(\d+(?:\.\d+)?)\s*mm", re.IGNORECASE),
+    re.compile(r"\bD\s*=\s*(\d+(?:\.\d+)?)\b", re.IGNORECASE),
+)
 
 
 def strip_comments(line: str) -> str:
@@ -143,3 +153,21 @@ def extract_tool_name_from_comment(line: str) -> Optional[str]:
     if "Default Tool" in text:
         text = text.replace("Default Tool", "Tool ")
     return text
+
+
+def extract_tool_diameter_mm(line: str) -> Optional[float]:
+    """Parse tool diameter in mm from FreeCAD/CAM-style comments or tool labels."""
+    stripped = line.strip()
+    if not stripped:
+        return None
+    for pattern in _TOOL_DIAMETER_PATTERNS:
+        match = pattern.search(stripped)
+        if match is None:
+            continue
+        try:
+            value = float(match.group(1))
+        except ValueError:
+            continue
+        if value > 0:
+            return value
+    return None

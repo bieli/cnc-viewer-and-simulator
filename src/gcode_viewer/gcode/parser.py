@@ -43,6 +43,8 @@ class LayerParser:
         self.time_estimation_str = ""
         self.step_z_info_str = ""
         self.material_size_info_str = ""
+        self.tool_diameter_mm = 3.0
+        self.stock_bounds = None
         self.warnings: List[GCodeValidationIssue] = []
 
     def parse_layer_list(
@@ -66,6 +68,8 @@ class LayerParser:
             layer.time_estimation = self.time_estimation_str
             layer.step_z_info = self.step_z_info_str
             layer.material_size_info = self.material_size_info_str
+            layer.tool_diameter_mm = self.tool_diameter_mm
+            layer.stock_bounds = self.stock_bounds
             layers.append(layer)
         return layers
 
@@ -77,6 +81,8 @@ class LayerParser:
         self.time_estimation_str = stats.time_estimation
         self.step_z_info_str = stats.step_z_info
         self.material_size_info_str = stats.material_size_info
+        self.tool_diameter_mm = stats.tool_diameter_mm
+        self.stock_bounds = stats.stock_bounds
         self.warnings = list(stats.warnings)
 
     def split_into_layers(self, lines: Sequence[GCodeSource]) -> List[List[GCodeLine]]:

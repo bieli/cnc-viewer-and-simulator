@@ -2,7 +2,7 @@ PyQt5
 PyOpenGL
 PyOpenGL-accelerate
 matplotlib
-pyqtgraph<=0.12.4
-numpy
+pyqtgraph>=0.12.4,<0.14
+numpy>=1.22
 imageio>=2.31
 imageio-ffmpeg>=0.4

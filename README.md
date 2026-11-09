@@ -14,12 +14,21 @@
   <img src="img/ss01.png" alt="CNC Viewer and Simulator screenshot">
 </p>
 
-## CNC Viewer and Simulator MP4 recording example
+## CNC Viewer and Simulator MP4 recording example (toolpath only)
 
 <p align="center">
-  <img src="img/cnc_simulation_20261108_125901.gif" alt="CNC Viewer and Simulator MP4 recording example">
+  <img src="img/cnc_simulation_20261108_125901.gif" alt="CNC Viewer and Simulator MP4 recording example  (toolpath only)">
 </p>
 
+
+## CNC Viewer and Simulator MP4 recording example (material only)
+
+<p align="center">
+  <img src="img/cnc_simulation_20261109_224547.gif" alt="CNC Viewer and Simulator MP4 recording example (material only)">
+</p>
+
+
+img/cnc_simulation_20261109_224547.gif
 **Validate FreeCAD CAM G-code before you waste a blank.**
 
 Built for hobby CNC mills and FreeCAD Path/CAM users who post-process to `.nc` / `.gcode` and want a fast, visual second opinion - on the toolpath, clearances, depth steps, stock size, and feeds - **before** the machine starts cutting.

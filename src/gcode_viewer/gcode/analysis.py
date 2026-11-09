@@ -10,6 +10,7 @@ from gcode_viewer.gcode.words import (
     extract_feedrate,
     extract_motion_command,
     extract_spindle,
+    extract_tool_diameter_mm,
     extract_tool_name_from_comment,
     extract_xyz,
     tokenize,
@@ -25,6 +26,7 @@ from gcode_viewer.utils.time_estimate import format_duration, travel_time_second
 
 DEFAULT_CUT_FEEDRATE_MM_MIN = 1000.0
 DEFAULT_RAPID_FEEDRATE_MM_MIN = 600.0
+DEFAULT_TOOL_DIAMETER_MM = 3.0
 # Z at/above last rapid height minus this margin counts as clearance, not stock.
 CLEARANCE_Z_MARGIN_MM = 3.0
 
@@ -38,6 +40,7 @@ class MachiningStats:
     rapid_time_seconds: float
     unique_z_levels: frozenset[float]
     stock_bounds: Optional[Bounds3D] = None
+    tool_diameter_mm: float = DEFAULT_TOOL_DIAMETER_MM
     warnings: Tuple[GCodeValidationIssue, ...] = ()
     used_default_cut_feedrate: bool = False
 
@@ -52,6 +55,7 @@ class MachiningStats:
     @property
     def tool_info(self) -> str:
         lines: List[str] = [f"Tool: {self.tool_name}"]
+        lines.append(f"Tool diameter: {self.tool_diameter_mm:.2f} mm")
         if self.max_spindle_rpm > 0:
             lines.append(f"Spindle speed: {self.max_spindle_rpm} RPM")
         if self.max_feedrate_mm_min > 0:
@@ -82,11 +86,11 @@ def _engaged_stock_z_range(samples: Sequence[float]) -> Optional[Tuple[float, fl
     counts = Counter(round(value, 1) for value in samples)
     min_count = max(20, int(0.001 * len(samples)))
     common = [value for value, count in counts.items() if count >= min_count]
+    # Deepest cut must always be included so lower step-downs stay in the stock box.
+    stock_z_min = min(samples)
     if common:
-        stock_z_min = min(common)
         stock_z_max = max(common)
     else:
-        stock_z_min = min(samples)
         stock_z_max = max(samples)
     # When all engaged Z are ≤ 0, treat Z0 as stock top (common CNC convention).
     if stock_z_max <= 1e-9:
@@ -113,6 +117,7 @@ def analyze_machining(
         )
 
     tool_name = "Default Tool"
+    tool_diameter_mm = DEFAULT_TOOL_DIAMETER_MM
     max_spindle = 0
     max_feedrate = 0
     cutting_time = 0.0
@@ -141,6 +146,11 @@ def analyze_machining(
         tool_from_comment = extract_tool_name_from_comment(line.text)
         if tool_from_comment:
             tool_name = tool_from_comment
+        diameter = extract_tool_diameter_mm(line.text)
+        if diameter is not None:
+            tool_diameter_mm = diameter
+            if tool_from_comment is None and "Endmill" in line.text:
+                tool_name = line.text.strip("() ")
 
         words = tokenize(line.text)
         if not words:
@@ -265,6 +275,7 @@ def analyze_machining(
         rapid_time_seconds=rapid_time,
         unique_z_levels=frozenset(unique_z_levels),
         stock_bounds=stock_bounds,
+        tool_diameter_mm=tool_diameter_mm,
         warnings=tuple(warnings),
         used_default_cut_feedrate=override_feedrate is None and not saw_positive_cut_feedrate,
     )

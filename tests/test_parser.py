@@ -25,6 +25,8 @@ def test_parse_layer_list_from_fixture(sample_freecad_nc: Path) -> None:
 
     assert len(layers) >= 2
     assert layers[0].tool_info.startswith("Tool: Endmill 6mm")
+    assert layers[0].tool_diameter_mm == 6.0
+    assert layers[0].stock_bounds is not None
     assert layers[0].time_estimation.count(":") == 2
     assert any(layer.x_data for layer in layers)
     assert any("g" in layer.matplot_color for layer in layers)

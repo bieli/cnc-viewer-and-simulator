@@ -29,6 +29,15 @@ RECORD_BUTTON_ACTIVE_STYLE = (
     "background-color: #ad1457; color: white; border: 2px solid #ffcdd2; "
     "border-radius: 4px;"
 )
+TOGGLE_OFF_STYLE = (
+    "font-weight: bold; font-size: 15px; padding: 5px 10px; "
+    "background-color: #607d8b; color: white; border: none; border-radius: 4px;"
+)
+TOGGLE_ON_STYLE = (
+    "font-weight: bold; font-size: 15px; padding: 5px 10px; "
+    "background-color: #2e7d32; color: white; border: 2px solid #a5d6a7; "
+    "border-radius: 4px;"
+)
 
 
 class SimulationControls(QWidget):
@@ -43,12 +52,18 @@ class SimulationControls(QWidget):
         self.on_to_end: Optional[PlayCallback] = None
         self.on_seek: Optional[SeekCallback] = None
         self.on_speed_changed: Optional[Callable[[float], None]] = None
+        self.on_material_toggled: Optional[Callable[[bool], None]] = None
+        self.on_precise_toggled: Optional[Callable[[bool], None]] = None
+        self.on_toolpaths_toggled: Optional[Callable[[bool], None]] = None
 
         self.status_label = QLabel("Simulation: idle")
         self.play_button = QPushButton("Play")
         self.pause_button = QPushButton("Pause")
         self.stop_button = QPushButton("Stop")
         self.record_button = QPushButton("Recording")
+        self.material_button = QPushButton("Material")
+        self.precise_button = QPushButton("Precise")
+        self.toolpaths_button = QPushButton("Toolpaths")
         self.prev_button = QPushButton("Prev")
         self.next_button = QPushButton("Next")
         self.end_button = QPushButton("End")
@@ -56,6 +71,9 @@ class SimulationControls(QWidget):
         self.progress_slider = QSlider(Qt.Orientation.Horizontal)
         self._seeking = False
         self._recording = False
+        self._material_enabled = False
+        self._precise_enabled = False
+        self._toolpaths_visible = True
         self._init_ui()
 
     def _init_ui(self) -> None:
@@ -92,6 +110,34 @@ class SimulationControls(QWidget):
             "Stop ends recording (mouse orbit is included)."
         )
         self.record_button.setMinimumWidth(110)
+
+        for toggle, tip in (
+            (
+                self.material_button,
+                "Show stock and carve material along cut moves during Play/Recording.",
+            ),
+            (
+                self.precise_button,
+                "Finer XY height-map stock (sharper edges). Carves live during "
+                "Play/Recording — no long precompute.",
+            ),
+            (
+                self.toolpaths_button,
+                "Show or hide toolpath lines so stock removal is easier to see.",
+            ),
+        ):
+            toggle.setCheckable(True)
+            toggle.setMinimumHeight(36)
+            toggle.setMinimumWidth(100)
+            toggle.setToolTip(tip)
+            buttons.addWidget(toggle)
+        self.material_button.setChecked(False)
+        self.precise_button.setChecked(False)
+        self.toolpaths_button.setChecked(True)
+        self.material_button.toggled.connect(self._emit_material)
+        self.precise_button.toggled.connect(self._emit_precise)
+        self.toolpaths_button.toggled.connect(self._emit_toolpaths)
+        self._refresh_toggle_styles()
 
         speed_label = QLabel("Speed")
         speed_label.setStyleSheet("font-size: 15px; font-weight: bold; color: #444;")
@@ -141,6 +187,36 @@ class SimulationControls(QWidget):
     def set_status(self, text: str) -> None:
         self.status_label.setText(text)
 
+    def set_material_enabled(self, enabled: bool) -> None:
+        self.material_button.blockSignals(True)
+        self.material_button.setChecked(enabled)
+        self.material_button.blockSignals(False)
+        self._material_enabled = enabled
+        self._refresh_toggle_styles()
+
+    def set_precise_enabled(self, enabled: bool) -> None:
+        self.precise_button.blockSignals(True)
+        self.precise_button.setChecked(enabled)
+        self.precise_button.blockSignals(False)
+        self._precise_enabled = enabled
+        self._refresh_toggle_styles()
+
+    def set_toolpaths_visible(self, visible: bool) -> None:
+        self.toolpaths_button.blockSignals(True)
+        self.toolpaths_button.setChecked(visible)
+        self.toolpaths_button.blockSignals(False)
+        self._toolpaths_visible = visible
+        self._refresh_toggle_styles()
+
+    def is_material_enabled(self) -> bool:
+        return self._material_enabled
+
+    def is_precise_enabled(self) -> bool:
+        return self._precise_enabled
+
+    def is_toolpaths_visible(self) -> bool:
+        return self._toolpaths_visible
+
     def set_progress_range(self, maximum: int) -> None:
         self.progress_slider.setEnabled(maximum > 0)
         self.progress_slider.setMaximum(max(0, maximum))
@@ -189,6 +265,35 @@ class SimulationControls(QWidget):
     def _emit_speed(self) -> None:
         if self.on_speed_changed:
             self.on_speed_changed(self.current_speed())
+
+    def _emit_material(self, checked: bool) -> None:
+        self._material_enabled = checked
+        self._refresh_toggle_styles()
+        if self.on_material_toggled:
+            self.on_material_toggled(checked)
+
+    def _emit_precise(self, checked: bool) -> None:
+        self._precise_enabled = checked
+        self._refresh_toggle_styles()
+        if self.on_precise_toggled:
+            self.on_precise_toggled(checked)
+
+    def _emit_toolpaths(self, checked: bool) -> None:
+        self._toolpaths_visible = checked
+        self._refresh_toggle_styles()
+        if self.on_toolpaths_toggled:
+            self.on_toolpaths_toggled(checked)
+
+    def _refresh_toggle_styles(self) -> None:
+        self.material_button.setStyleSheet(
+            TOGGLE_ON_STYLE if self._material_enabled else TOGGLE_OFF_STYLE
+        )
+        self.precise_button.setStyleSheet(
+            TOGGLE_ON_STYLE if self._precise_enabled else TOGGLE_OFF_STYLE
+        )
+        self.toolpaths_button.setStyleSheet(
+            TOGGLE_ON_STYLE if self._toolpaths_visible else TOGGLE_OFF_STYLE
+        )
 
     def _on_slider_pressed(self) -> None:
         self._seeking = True

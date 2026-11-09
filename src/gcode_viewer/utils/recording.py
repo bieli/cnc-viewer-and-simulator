@@ -96,7 +96,8 @@ class SimulationRecorder:
         self.frame_count = 0
 
     def add_frame(self, frame: np.ndarray) -> None:
-        if self._writer is None:
+        writer = self._writer
+        if writer is None:
             raise RuntimeError("recorder is not started")
         if frame.ndim != 3 or frame.shape[2] != 3:
             raise ValueError("frame must be an RGB array with shape (H, W, 3)")
@@ -107,7 +108,7 @@ class SimulationRecorder:
         if even_h <= 0 or even_w <= 0:
             return
         clipped = frame[:even_h, :even_w]
-        self._writer.append_data(np.ascontiguousarray(clipped))
+        writer.append_data(np.ascontiguousarray(clipped))
         self.frame_count += 1
 
     def close(self) -> Path:

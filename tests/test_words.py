@@ -4,6 +4,7 @@ from gcode_viewer.gcode.words import (
     extract_feedrate,
     extract_motion_command,
     extract_spindle,
+    extract_tool_diameter_mm,
     extract_tool_name_from_comment,
     extract_xyz,
     is_comment_line,
@@ -38,6 +39,13 @@ def test_extract_spindle() -> None:
 
 def test_extract_tool_name_from_freecad_comment() -> None:
     assert extract_tool_name_from_comment("(TC: Endmill 6mm)") == "Endmill 6mm"
+
+
+def test_extract_tool_diameter_mm() -> None:
+    assert extract_tool_diameter_mm("(TC: Endmill 6mm)") == 6.0
+    assert extract_tool_diameter_mm("(Tool diameter: 3.175 mm)") == 3.175
+    assert extract_tool_diameter_mm("(D=8)") == 8.0
+    assert extract_tool_diameter_mm("G1 X10") is None
 
 
 def test_extract_motion_command_skips_line_numbers() -> None:

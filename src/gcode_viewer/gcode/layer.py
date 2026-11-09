@@ -3,8 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
+from gcode_viewer.utils.geometry import Bounds3D
+
 ColorRGBA = Tuple[float, float, float, float]
 Segment = Tuple[float, float]
+DEFAULT_LAYER_TOOL_DIAMETER_MM = 3.0
 
 
 @dataclass
@@ -26,3 +29,5 @@ class Layer:
     time_estimation: str = ""
     step_z_info: str = ""
     material_size_info: str = ""
+    tool_diameter_mm: float = DEFAULT_LAYER_TOOL_DIAMETER_MM
+    stock_bounds: Optional[Bounds3D] = None

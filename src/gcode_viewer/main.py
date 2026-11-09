@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 from typing import Optional
 
+import gcode_viewer.numpy_compat  # noqa: F401  # NumPy 2 + older pyqtgraph
 from gcode_viewer.application import Application
 
 

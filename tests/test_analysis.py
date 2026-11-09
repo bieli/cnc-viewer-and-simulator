@@ -15,10 +15,12 @@ def test_analyze_machining_reads_tool_and_spindle() -> None:
     ]
     stats = analyze_machining(lines)
     assert stats.tool_name == "Endmill 6mm"
+    assert stats.tool_diameter_mm == 6.0
     assert stats.max_spindle_rpm == 18000
     assert stats.max_feedrate_mm_min == 1200
     assert stats.cutting_time_seconds > 0
     assert "Endmill 6mm" in stats.tool_info
+    assert "Tool diameter: 6.00 mm" in stats.tool_info
     assert stats.time_estimation.count(":") == 2
 
 
@@ -63,3 +65,22 @@ def test_analyze_machining_reports_required_material_size() -> None:
     assert "X: 40.00 mm" in stats.material_size_info
     assert "Y: 10.00 mm" in stats.material_size_info
     assert "Z: 2.00 mm" in stats.material_size_info
+
+
+def test_stock_bounds_include_deeper_second_layer() -> None:
+    """A short second step-down must still extend stock min_z."""
+    lines = [
+        "G0 X0 Y0 Z5",
+        "G1 Z-1 F1000",
+        "G1 X30 Y0",
+        "G1 X30 Y20",
+        "G1 X0 Y20",
+        "G1 X0 Y0",
+        "G1 Z-2.5",
+        "G1 X5 Y5",
+        "G0 Z5",
+    ]
+    stats = analyze_machining(lines)
+    assert stats.stock_bounds is not None
+    assert stats.stock_bounds.min_z == pytest.approx(-2.5)
+    assert stats.stock_bounds.max_z == pytest.approx(0.0)
