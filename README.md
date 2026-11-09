@@ -1,7 +1,7 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
   <a href=".github/workflows/ci.yml"><img src="https://img.shields.io/badge/CI-pytest%20%7C%20mypy-success" alt="CI"></a>
-  <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python 3.9+">
+  <img src="https://img.shields.io/badge/python-3.9%2B-blue" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/FreeCAD-CAM%20friendly-orange" alt="FreeCAD CAM friendly">
 </p>
 
