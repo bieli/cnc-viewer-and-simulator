@@ -10,7 +10,8 @@ readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
 authors = [
-  { name = "Marcin Bielak", name = "Johannes Hagspiel" },
+  { name = "Marcin Bielak" },
+  { name = "Johannes Hagspiel" },
 ]
 keywords = ["gcode", "cnc", "cam", "freecad", "viewer", "validation", "simulation"]
 classifiers = [
