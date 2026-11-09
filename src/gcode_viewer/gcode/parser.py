@@ -15,7 +15,7 @@ from gcode_viewer.gcode.words import (
     tokenize,
 )
 from gcode_viewer.utils.arc import tessellate_arc
-from gcode_viewer.utils.geometry import bounds_from_segment
+from gcode_viewer.utils.geometry import Bounds3D, bounds_from_segment
 
 DEFAULT_BOUNDS = 1e24
 RAPID_COLOR: ColorRGBA = (1.0, 0.3, 0.3, 0.8)
@@ -44,7 +44,7 @@ class LayerParser:
         self.step_z_info_str = ""
         self.material_size_info_str = ""
         self.tool_diameter_mm = 3.0
-        self.stock_bounds = None
+        self.stock_bounds: Optional[Bounds3D] = None
         self.warnings: List[GCodeValidationIssue] = []
 
     def parse_layer_list(
