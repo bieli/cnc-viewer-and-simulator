@@ -7,6 +7,11 @@
 
 # CNC Viewer and Simulator
 
+After 10+ years experience with FreeCAD - great Open Source CAD/CAM tool - I decided to build my own G-CODE - CAM output - ciewer and simulator for CNC machining. Reasons: 
+- review my hobby projects before starting CNC machine
+- discovery constraints and boundaries in stock/material
+- visualize tools paths in G-CODE projects
+- and for fun :-)
 
 ## CNC Viewer and Simulator screenshot example opened G-CODE (file from included examples/wave.gcode)
 
@@ -28,8 +33,7 @@
 </p>
 
 
-img/cnc_simulation_20261109_224547.gif
-**Validate FreeCAD CAM G-code before you waste a blank.**
+# Validate FreeCAD CAM G-CODE before you waste a blank
 
 Built for hobby CNC mills and FreeCAD Path/CAM users who post-process to `.nc` / `.gcode` and want a fast, visual second opinion - on the toolpath, clearances, depth steps, stock size, and feeds - **before** the machine starts cutting.
 
